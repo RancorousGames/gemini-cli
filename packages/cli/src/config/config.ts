@@ -43,6 +43,7 @@ import { saveModelChange, loadSettings } from './settings.js';
 import { loadSandboxConfig } from './sandboxConfig.js';
 import { resolvePath } from '../utils/resolvePath.js';
 import { appEvents } from '../utils/events.js';
+import { workspaceService } from '../omni/WorkspaceService.js';
 import { RESUME_LATEST } from '../utils/sessionUtils.js';
 
 import { isWorkspaceTrusted } from './trustedFolders.js';
@@ -73,6 +74,7 @@ export interface CliArgs {
   resume: string | typeof RESUME_LATEST | undefined;
   listSessions: boolean | undefined;
   deleteSession: string | undefined;
+  workspace?: string | undefined;
   includeDirectories: string[] | undefined;
   screenReader: boolean | undefined;
   useWriteTodos: boolean | undefined;
@@ -95,6 +97,11 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
       type: 'boolean',
       description: 'Run in debug mode?',
       default: false,
+    })
+    .option('workspace', {
+      alias: 'w',
+      type: 'string',
+      description: 'The initial workspace directory.',
     })
     .command('$0 [query..]', 'Launch Gemini CLI', (yargsInstance) =>
       yargsInstance
@@ -400,10 +407,11 @@ export async function loadCliConfig(
   argv: CliArgs,
   options: LoadCliConfigOptions = {},
 ): Promise<Config> {
-  const { cwd = process.cwd(), projectHooks } = options;
+  const { cwd = workspaceService.getWorkspaceRoot(), projectHooks } = options;
+  const effectiveCwd = argv.workspace ? resolvePath(argv.workspace) : cwd;
   const debugMode = isDebugMode(argv);
 
-  const loadedSettings = loadSettings(cwd);
+  const loadedSettings = await loadSettings(effectiveCwd);
 
   if (argv.sandbox) {
     process.env['GEMINI_SANDBOX'] = 'true';
@@ -427,7 +435,7 @@ export async function loadCliConfig(
     setServerGeminiMdFilename(getCurrentGeminiMdFilename());
   }
 
-  const fileService = new FileDiscoveryService(cwd);
+  const fileService = new FileDiscoveryService(effectiveCwd);
 
   const memoryFileFiltering = {
     ...DEFAULT_MEMORY_FILE_FILTERING_OPTIONS,
@@ -447,7 +455,7 @@ export async function loadCliConfig(
     settings,
     requestConsent: requestConsentNonInteractive,
     requestSetting: promptForSetting,
-    workspaceDir: cwd,
+    workspaceDir: effectiveCwd,
     enabledExtensionOverrides: argv.extensions,
     eventEmitter: appEvents as EventEmitter<ExtensionEvents>,
   });
@@ -462,7 +470,7 @@ export async function loadCliConfig(
   if (!experimentalJitContext) {
     // Call the (now wrapper) loadHierarchicalGeminiMemory which calls the server's version
     const result = await loadServerHierarchicalMemory(
-      cwd,
+      effectiveCwd,
       [],
       debugMode,
       fileService,
@@ -642,7 +650,7 @@ export async function loadCliConfig(
     sessionId,
     embeddingModel: DEFAULT_GEMINI_EMBEDDING_MODEL,
     sandbox: sandboxConfig,
-    targetDir: cwd,
+    targetDir: effectiveCwd,
     includeDirectories,
     loadMemoryFromIncludeDirectories:
       settings.context?.loadMemoryFromIncludeDirectories || false,
@@ -692,7 +700,7 @@ export async function loadCliConfig(
       process.env['https_proxy'] ||
       process.env['HTTP_PROXY'] ||
       process.env['http_proxy'],
-    cwd,
+    cwd: effectiveCwd,
     fileDiscoveryService: fileService,
     bugCommand: settings.advanced?.bugCommand,
     model: resolvedModel,
@@ -745,7 +753,7 @@ export async function loadCliConfig(
     projectHooks: projectHooks || {},
     onModelChange: (model: string) => saveModelChange(loadedSettings, model),
     onReload: async () => {
-      const refreshedSettings = loadSettings(cwd);
+      const refreshedSettings = await loadSettings(cwd);
       return {
         disabledSkills: refreshedSettings.merged.skills?.disabled,
       };

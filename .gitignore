@@ -54,6 +54,9 @@ packages/cli/download-ripgrep*/
 gha-creds-*.json
 
 # Log files
+*.log
+*.txt
+*.wav
 patch_output.log
 
 .genkit

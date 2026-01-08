@@ -13,7 +13,7 @@ import chalk from 'chalk';
 
 export async function handleList(args: { all?: boolean }) {
   const workspaceDir = process.cwd();
-  const settings = loadSettings(workspaceDir);
+  const settings = await loadSettings(workspaceDir);
 
   const config = await loadCliConfig(
     settings.merged,

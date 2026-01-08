@@ -96,6 +96,11 @@ export function useReactToolScheduler(
   const outputUpdateHandler: OutputUpdateHandler = useCallback(
     (toolCallId, outputChunk) => {
       setLastToolOutputTime(Date.now());
+      debugLogger.log(
+        `[DEBUG] outputUpdateHandler toolCallId=${toolCallId} chunk=${outputChunk.toString().substring(0, 20)}...`,
+      );
+      // Removed appEvents.emit(AppEvent.RemoteToolCall, outputChunk.toString());
+      // Individual chunks are redundant and cause duplication/objects issues on Android.
       setToolCallsForDisplay((prevCalls) =>
         prevCalls.map((tc) => {
           if (tc.request.callId === toolCallId && tc.status === 'executing') {
@@ -111,6 +116,9 @@ export function useReactToolScheduler(
 
   const allToolCallsCompleteHandler: AllToolCallsCompleteHandler = useCallback(
     async (completedToolCalls) => {
+      debugLogger.log(
+        `[DEBUG] allToolCallsCompleteHandler count=${completedToolCalls.length}`,
+      );
       await onCompleteRef.current(completedToolCalls);
     },
     [],

@@ -122,6 +122,7 @@ import { terminalCapabilityManager } from './utils/terminalCapabilityManager.js'
 import { useInputHistoryStore } from './hooks/useInputHistoryStore.js';
 import { useBanner } from './hooks/useBanner.js';
 import { useHookDisplayState } from './hooks/useHookDisplayState.js';
+import { OmniDialogManager } from '../omni/OmniDialogManager.js';
 import {
   WARNING_PROMPT_DURATION_MS,
   QUEUE_ERROR_DISPLAY_DURATION_MS,
@@ -601,12 +602,14 @@ Logging in with Google... Restarting Gemini CLI to continue.
         return;
       }
 
-      const error = validateAuthMethod(
-        settings.merged.security.auth.selectedType,
-      );
-      if (error) {
-        onAuthError(error);
-      }
+      void (async () => {
+        const authType = settings.merged.security?.auth?.selectedType;
+        if (!authType) return;
+        const error = await validateAuthMethod(authType);
+        if (error) {
+          onAuthError(error);
+        }
+      })();
     }
   }, [
     settings.merged.security?.auth?.selectedType,
@@ -775,6 +778,17 @@ Logging in with Google... Restarting Gemini CLI to continue.
     }
   }, [pendingRestorePrompt, inputHistory, historyManager.history]);
 
+  // Bridge for legacy IPC events
+  const onRemoteEventBridge = useCallback((type: string, data: unknown) => {
+    // Map string types back to AppEvents
+    if (type === 'remote-response' && typeof data === 'string') {
+      appEvents.emit(AppEvent.RemoteResponse, data);
+    } else if (type === 'remote-tool-call' && typeof data === 'string') {
+      appEvents.emit(AppEvent.RemoteToolCall, data);
+    }
+    // Add other mappings as needed in future phases
+  }, []);
+
   const {
     streamingState,
     submitQuery,
@@ -793,6 +807,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
     config,
     settings,
     setDebugMessage,
+    onRemoteEventBridge, // Injected bridge
     handleSlashCommand,
     shellModeActive,
     getPreferredEditor,
@@ -1112,11 +1127,74 @@ Logging in with Google... Restarting Gemini CLI to continue.
       setConstrainHeight(false);
     };
     appEvents.on(AppEvent.OpenDebugConsole, openDebugConsole);
+    const onRemotePrompt = (text: string) => {
+      handleFinalSubmit(text);
+    };
+    appEvents.on(AppEvent.RemotePrompt, onRemotePrompt);
+    const onRequestRemoteHistory = () => {
+      const historyData: Array<{ sender: string; text: string }> = [];
+      for (const h of historyManager.history) {
+        if (h.type === 'user') {
+          historyData.push({ sender: 'Me', text: h.text || '' });
+        } else if (h.type === 'tool_group') {
+          for (const t of h.tools) {
+            const status =
+              t.status === ToolCallStatus.Success ? 'SUCCESS' : t.status;
+            let resultText = '';
+            if (t.resultDisplay) {
+              if (typeof t.resultDisplay === 'string') {
+                resultText = t.resultDisplay;
+              } else {
+                try {
+                  resultText = JSON.stringify(t.resultDisplay, null, 2);
+                } catch (_e) {
+                  resultText = String(t.resultDisplay);
+                }
+              }
+            }
+
+            const header = `Tool Call: ${t.name}(${t.description}) [${status}]`;
+            const lowerName = t.name.toLowerCase();
+
+            if (
+              resultText.includes('<<<<<<<') ||
+              resultText.includes('=======') ||
+              resultText.includes('>>>>>>>') ||
+              lowerName === 'writefile' ||
+              lowerName === 'write_file' ||
+              (typeof t.resultDisplay === 'object' &&
+                t.resultDisplay !== null &&
+                'fileDiff' in t.resultDisplay)
+            ) {
+              historyData.push({ sender: 'System', text: header });
+              historyData.push({ sender: 'CodeDiff', text: resultText });
+            } else {
+              historyData.push({
+                sender: 'System',
+                text: `${header}\n${resultText}`,
+              });
+            }
+          }
+        } else if (h.text) {
+          historyData.push({ sender: 'AI', text: h.text });
+        }
+      }
+
+      appEvents.emit(
+        AppEvent.RemoteResponse,
+        '[HISTORY_START]' +
+          JSON.stringify(historyData.filter((h) => h.text)) +
+          '[HISTORY_END]',
+      );
+    };
+    appEvents.on(AppEvent.RequestRemoteHistory, onRequestRemoteHistory);
 
     return () => {
       appEvents.off(AppEvent.OpenDebugConsole, openDebugConsole);
+      appEvents.off(AppEvent.RemotePrompt, onRemotePrompt);
+      appEvents.off(AppEvent.RequestRemoteHistory, onRequestRemoteHistory);
     };
-  }, [config]);
+  }, [config, handleFinalSubmit, historyManager.history]);
 
   useEffect(() => {
     if (ctrlCTimerRef.current) {
@@ -1281,6 +1359,17 @@ Logging in with Google... Restarting Gemini CLI to continue.
   );
 
   useKeypress(handleGlobalKeypress, { isActive: true });
+
+  const prevStreamingState = useRef(streamingState);
+  useEffect(() => {
+    if (
+      prevStreamingState.current !== StreamingState.Idle &&
+      streamingState === StreamingState.Idle
+    ) {
+      appEvents.emit(AppEvent.RemoteResponse, '[TURN_FINISHED]');
+    }
+    prevStreamingState.current = streamingState;
+  }, [streamingState]);
 
   // Update terminal title with Gemini CLI status and thoughts
   useEffect(() => {
@@ -1728,6 +1817,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
   return (
     <UIStateContext.Provider value={uiState}>
       <UIActionsContext.Provider value={uiActions}>
+        <OmniDialogManager />
         <ConfigContext.Provider value={config}>
           <AppContext.Provider
             value={{

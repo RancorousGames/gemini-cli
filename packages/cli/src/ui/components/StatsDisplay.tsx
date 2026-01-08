@@ -90,9 +90,9 @@ const buildModelRows = (
       key: name,
       modelName,
       requests: metrics.api.totalRequests,
-      cachedTokens: cachedTokens.toLocaleString(),
-      inputTokens: inputTokens.toLocaleString(),
-      outputTokens: metrics.tokens.candidates.toLocaleString(),
+      cachedTokens: cachedTokens.toLocaleString('en-US'),
+      inputTokens: inputTokens.toLocaleString('en-US'),
+      outputTokens: metrics.tokens.candidates.toLocaleString('en-US'),
       bucket: quotas?.buckets?.find((b) => b.modelId === modelName),
       isActive: true,
     };
@@ -335,7 +335,7 @@ const ModelUsageTable: React.FC<{
         <Box flexDirection="column" marginTop={1}>
           <Text color={theme.text.primary}>
             <Text color={theme.status.success}>Savings Highlight:</Text>{' '}
-            {totalCachedTokens.toLocaleString()} (
+            {totalCachedTokens.toLocaleString('en-US')} (
             <Text color={cacheEfficiencyColor}>
               {cacheEfficiency.toFixed(1)}%
             </Text>

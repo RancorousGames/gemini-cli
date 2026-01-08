@@ -19,7 +19,7 @@ interface EnableArgs {
 export async function handleEnable(args: EnableArgs) {
   const { name } = args;
   const workspaceDir = process.cwd();
-  const settings = loadSettings(workspaceDir);
+  const settings = await loadSettings(workspaceDir);
 
   const result = enableSkill(settings, name);
   const feedback = renderSkillActionFeedback(

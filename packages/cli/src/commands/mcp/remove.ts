@@ -19,7 +19,7 @@ async function removeMcpServer(
   const { scope } = options;
   const settingsScope =
     scope === 'user' ? SettingScope.User : SettingScope.Workspace;
-  const settings = loadSettings();
+  const settings = await loadSettings();
 
   const existingSettings = settings.forScope(settingsScope).settings;
   const mcpServers = existingSettings.mcpServers || {};

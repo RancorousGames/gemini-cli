@@ -66,11 +66,15 @@ import {
   type TrackedCancelledToolCall,
   type TrackedWaitingToolCall,
 } from './useReactToolScheduler.js';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { useSessionStats } from '../contexts/SessionContext.js';
 import { useKeypress } from './useKeypress.js';
 import type { LoadedSettings } from '../../config/settings.js';
+import { appEvents, AppEvent } from '../../utils/events.js';
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+
+// Generic event handler for remote/headless bridges
+export type OnRemoteEvent = (type: string, data: unknown) => void;
 
 enum StreamProcessingStatus {
   Completed,
@@ -86,9 +90,20 @@ function showCitations(settings: LoadedSettings): boolean {
   return true;
 }
 
+async function logDebugEvent(event: unknown) {
+  try {
+    const logLine = `[${new Date().toISOString()}] ${JSON.stringify(event)}\n`;
+    await fs.appendFile(
+      'D:/SSDProjects/Tools/gemini-cli/gemini_debug_events.log',
+      logLine,
+    );
+  } catch (_e) {
+    // Ignore logging errors
+  }
+}
+
 /**
  * Manages the Gemini stream, including user input, command processing,
- * API interaction, and tool call lifecycle.
  */
 export const useGeminiStream = (
   geminiClient: GeminiClient,
@@ -97,6 +112,7 @@ export const useGeminiStream = (
   config: Config,
   settings: LoadedSettings,
   onDebugMessage: (message: string) => void,
+  onRemoteEvent: OnRemoteEvent | undefined, // Injected event handler
   handleSlashCommand: (
     cmd: PartListUnion,
   ) => Promise<SlashCommandProcessorResult | false>,
@@ -539,6 +555,7 @@ export const useGeminiStream = (
         // Prevents additional output after a user initiated cancel.
         return '';
       }
+      appEvents.emit(AppEvent.RemoteResponse, eventValue);
       let newGeminiMessageBuffer = currentGeminiMessageBuffer + eventValue;
       if (
         pendingHistoryItemRef.current?.type !== 'gemini' &&
@@ -837,9 +854,13 @@ export const useGeminiStream = (
       let geminiMessageBuffer = '';
       const toolCallRequests: ToolCallRequestInfo[] = [];
       for await (const event of stream) {
+        void logDebugEvent(event);
         switch (event.type) {
           case ServerGeminiEventType.Thought:
             setThought(event.value);
+            if (event.value?.description) {
+              appEvents.emit(AppEvent.RemoteThought, event.value.description);
+            }
             break;
           case ServerGeminiEventType.Content:
             geminiMessageBuffer = handleContentEvent(
@@ -850,6 +871,10 @@ export const useGeminiStream = (
             break;
           case ServerGeminiEventType.ToolCallRequest:
             toolCallRequests.push(event.value);
+            appEvents.emit(
+              AppEvent.RemoteToolCall,
+              `Tool Call: ${event.value.name}(${JSON.stringify(event.value.args)})`,
+            );
             break;
           case ServerGeminiEventType.UserCancelled:
             handleUserCancelledEvent(userMessageTimestamp);
@@ -912,6 +937,7 @@ export const useGeminiStream = (
           }
         }
       }
+
       if (toolCallRequests.length > 0) {
         scheduleToolCalls(toolCallRequests, signal);
       }
@@ -975,6 +1001,9 @@ export const useGeminiStream = (
             );
 
             if (!shouldProceed || queryToSend === null) {
+              if (activeQueryIdRef.current === queryId) {
+                appEvents.emit(AppEvent.RemoteResponse, '[TURN_FINISHED]');
+              }
               return;
             }
 

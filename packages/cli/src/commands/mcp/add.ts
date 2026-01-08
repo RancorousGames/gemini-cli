@@ -38,7 +38,7 @@ async function addMcpServer(
     excludeTools,
   } = options;
 
-  const settings = loadSettings(process.cwd());
+  const settings = await loadSettings(process.cwd());
   const inHome = settings.workspace.path === settings.user.path;
 
   if (scope === 'project' && inHome) {

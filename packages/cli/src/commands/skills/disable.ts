@@ -20,7 +20,7 @@ interface DisableArgs {
 export async function handleDisable(args: DisableArgs) {
   const { name, scope } = args;
   const workspaceDir = process.cwd();
-  const settings = loadSettings(workspaceDir);
+  const settings = await loadSettings(workspaceDir);
 
   const result = disableSkill(settings, name, scope);
   const feedback = renderSkillActionFeedback(

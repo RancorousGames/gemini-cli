@@ -16,11 +16,12 @@ import { exitCli } from '../utils.js';
 export async function handleList() {
   try {
     const workspaceDir = process.cwd();
+    const settings = await loadSettings(workspaceDir);
     const extensionManager = new ExtensionManager({
       workspaceDir,
       requestConsent: requestConsentNonInteractive,
       requestSetting: promptForSetting,
-      settings: loadSettings(workspaceDir).merged,
+      settings: settings.merged,
     });
     const extensions = await extensionManager.loadExtensions();
     if (extensions.length === 0) {

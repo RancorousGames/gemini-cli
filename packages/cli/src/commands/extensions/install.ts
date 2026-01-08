@@ -45,11 +45,12 @@ export async function handleInstall(args: InstallArgs) {
     }
 
     const workspaceDir = process.cwd();
+    const settings = await loadSettings(workspaceDir);
     const extensionManager = new ExtensionManager({
       workspaceDir,
       requestConsent,
       requestSetting: promptForSetting,
-      settings: loadSettings(workspaceDir).merged,
+      settings: settings.merged,
     });
     await extensionManager.loadExtensions();
     const extension =

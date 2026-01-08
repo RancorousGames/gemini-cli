@@ -20,11 +20,12 @@ interface UninstallArgs {
 export async function handleUninstall(args: UninstallArgs) {
   try {
     const workspaceDir = process.cwd();
+    const settings = await loadSettings(workspaceDir);
     const extensionManager = new ExtensionManager({
       workspaceDir,
       requestConsent: requestConsentNonInteractive,
       requestSetting: promptForSetting,
-      settings: loadSettings(workspaceDir).merged,
+      settings: settings.merged,
     });
     await extensionManager.loadExtensions();
 

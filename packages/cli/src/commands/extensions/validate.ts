@@ -33,11 +33,12 @@ export async function handleValidate(args: ValidateArgs) {
 
 async function validateExtension(args: ValidateArgs) {
   const workspaceDir = process.cwd();
+  const settings = await loadSettings(workspaceDir);
   const extensionManager = new ExtensionManager({
     workspaceDir,
     requestConsent: requestConsentNonInteractive,
     requestSetting: promptForSetting,
-    settings: loadSettings(workspaceDir).merged,
+    settings: settings.merged,
   });
   const absoluteInputPath = path.resolve(args.path);
   const extensionConfig: ExtensionConfig =

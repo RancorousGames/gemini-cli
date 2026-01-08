@@ -23,11 +23,12 @@ interface EnableArgs {
 
 export async function handleEnable(args: EnableArgs) {
   const workingDir = process.cwd();
+  const settings = await loadSettings(workingDir);
   const extensionManager = new ExtensionManager({
     workspaceDir: workingDir,
     requestConsent: requestConsentNonInteractive,
     requestSetting: promptForSetting,
-    settings: loadSettings(workingDir).merged,
+    settings: settings.merged,
   });
   await extensionManager.loadExtensions();
 

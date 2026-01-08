@@ -27,7 +27,7 @@ const RESET_COLOR = '\u001b[0m';
 async function getMcpServersFromConfig(): Promise<
   Record<string, MCPServerConfig>
 > {
-  const settings = loadSettings();
+  const settings = await loadSettings();
   const extensionManager = new ExtensionManager({
     settings: settings.merged,
     workspaceDir: process.cwd(),
@@ -59,7 +59,7 @@ async function testMCPConnection(
     version: '0.0.1',
   });
 
-  const settings = loadSettings();
+  const settings = await loadSettings();
   const sanitizationConfig = {
     enableEnvironmentVariableRedaction: true,
     allowedEnvironmentVariables: [],

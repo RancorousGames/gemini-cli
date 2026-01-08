@@ -5,8 +5,10 @@
  */
 
 import { useState, useRef, useCallback, useMemo } from 'react';
-import type { HistoryItem } from '../types.js';
+import type { HistoryItem, HistoryItemToolGroup } from '../types.js';
+import { ToolCallStatus } from '../types.js';
 import type { ChatRecordingService } from '@google/gemini-cli-core/src/services/chatRecordingService.js';
+import { appEvents, AppEvent } from '../../utils/events.js';
 
 // Type for the updater function passed to updateHistoryItem
 type HistoryItemUpdater = (
@@ -79,38 +81,92 @@ export function useHistory({
 
       // Record UI-specific messages, but don't do it if we're actually loading
       // an existing session.
-      if (!isResuming && chatRecordingService) {
-        switch (itemData.type) {
-          case 'compression':
-          case 'info':
-            chatRecordingService?.recordMessage({
-              model: undefined,
-              type: 'info',
-              content: itemData.text ?? '',
-            });
-            break;
-          case 'warning':
-            chatRecordingService?.recordMessage({
-              model: undefined,
-              type: 'warning',
-              content: itemData.text ?? '',
-            });
-            break;
-          case 'error':
-            chatRecordingService?.recordMessage({
-              model: undefined,
-              type: 'error',
-              content: itemData.text ?? '',
-            });
-            break;
-          case 'user':
-          case 'gemini':
-          case 'gemini_content':
-            // Core conversation recording handled by GeminiChat.
-            break;
-          default:
-            // Ignore the rest.
-            break;
+      if (!isResuming) {
+        if (
+          itemData.type === 'info' ||
+          itemData.type === 'warning' ||
+          itemData.type === 'error' ||
+          itemData.type === 'user_shell' ||
+          itemData.type === 'user'
+        ) {
+          appEvents.emit(
+            AppEvent.RemoteResponse,
+            (itemData as { text?: string }).text ?? '',
+          );
+        } else if (itemData.type === 'tool_group') {
+          for (const tool of (itemData as HistoryItemToolGroup).tools) {
+            const status =
+              tool.status === ToolCallStatus.Success ? 'SUCCESS' : tool.status;
+            let resultText = '';
+            if (tool.resultDisplay) {
+              if (typeof tool.resultDisplay === 'string') {
+                resultText = tool.resultDisplay;
+              } else {
+                try {
+                  resultText = JSON.stringify(tool.resultDisplay, null, 2);
+                } catch (_e) {
+                  resultText = String(tool.resultDisplay);
+                }
+              }
+            }
+
+            const header = `Tool Call: ${tool.name}(${tool.description}) [${status}]`;
+            const lowerName = tool.name.toLowerCase();
+
+            if (
+              resultText.includes('<<<<<<<') ||
+              resultText.includes('=======') ||
+              resultText.includes('>>>>>>>') ||
+              lowerName === 'writefile' ||
+              lowerName === 'write_file' ||
+              (typeof tool.resultDisplay === 'object' &&
+                tool.resultDisplay !== null &&
+                'fileDiff' in tool.resultDisplay)
+            ) {
+              appEvents.emit(AppEvent.RemoteResponse, header);
+              appEvents.emit(AppEvent.RemoteCodeDiff, resultText);
+            } else {
+              appEvents.emit(
+                AppEvent.RemoteResponse,
+                `${header}\n${resultText}`,
+              );
+            }
+          }
+        }
+
+        if (chatRecordingService) {
+          switch (itemData.type) {
+            case 'compression':
+            case 'info':
+              chatRecordingService?.recordMessage({
+                model: undefined,
+                type: 'info',
+                content: itemData.text ?? '',
+              });
+              break;
+            case 'warning':
+              chatRecordingService?.recordMessage({
+                model: undefined,
+                type: 'warning',
+                content: itemData.text ?? '',
+              });
+              break;
+            case 'error':
+              chatRecordingService?.recordMessage({
+                model: undefined,
+                type: 'error',
+                content: itemData.text ?? '',
+              });
+              break;
+            case 'user':
+            case 'gemini':
+            case 'gemini_content':
+              // Core conversation recording handled by GeminiChat.
+              break;
+            default:
+              // Ignore the rest.
+              break;
+          }
         }
       }
 

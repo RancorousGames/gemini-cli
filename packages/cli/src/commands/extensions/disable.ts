@@ -20,11 +20,12 @@ interface DisableArgs {
 
 export async function handleDisable(args: DisableArgs) {
   const workspaceDir = process.cwd();
+  const settings = await loadSettings(workspaceDir);
   const extensionManager = new ExtensionManager({
     workspaceDir,
     requestConsent: requestConsentNonInteractive,
     requestSetting: promptForSetting,
-    settings: loadSettings(workspaceDir).merged,
+    settings: settings.merged,
   });
   await extensionManager.loadExtensions();
 

@@ -10,6 +10,7 @@ import { stat } from 'node:fs/promises';
 import chalk from 'chalk';
 import { ExtensionEnablementManager } from './extensions/extensionEnablement.js';
 import { type Settings, SettingScope } from './settings.js';
+import { workspaceService } from '../omni/WorkspaceService.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { loadInstallMetadata, type ExtensionConfig } from './extension.js';
 import {
@@ -74,7 +75,7 @@ interface ExtensionManagerParams {
   settings: Settings;
   requestConsent: (consent: string) => Promise<boolean>;
   requestSetting: ((setting: ExtensionSetting) => Promise<string>) | null;
-  workspaceDir: string;
+  workspaceDir?: string;
   eventEmitter?: EventEmitter<ExtensionEvents>;
 }
 
@@ -96,7 +97,8 @@ export class ExtensionManager extends ExtensionLoader {
 
   constructor(options: ExtensionManagerParams) {
     super(options.eventEmitter);
-    this.workspaceDir = options.workspaceDir;
+    this.workspaceDir =
+      options.workspaceDir ?? workspaceService.getWorkspaceRoot();
     this.extensionEnablementManager = new ExtensionEnablementManager(
       options.enabledExtensionOverrides,
     );
@@ -105,8 +107,8 @@ export class ExtensionManager extends ExtensionLoader {
       telemetry: options.settings.telemetry,
       interactive: false,
       sessionId: randomUUID(),
-      targetDir: options.workspaceDir,
-      cwd: options.workspaceDir,
+      targetDir: this.workspaceDir,
+      cwd: this.workspaceDir,
       model: '',
       debugMode: false,
     });

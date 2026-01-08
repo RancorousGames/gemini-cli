@@ -227,7 +227,7 @@ export async function handleMigrateFromClaude() {
   );
 
   // Load current Gemini settings
-  const settings = loadSettings(workingDir);
+  const settings = await loadSettings(workingDir);
 
   // Merge migrated hooks with existing hooks
   const existingHooks =

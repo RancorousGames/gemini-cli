@@ -14,6 +14,14 @@ export enum AppEvent {
   McpClientUpdate = 'mcp-client-update',
   SelectionWarning = 'selection-warning',
   PasteTimeout = 'paste-timeout',
+  RemotePrompt = 'remote-prompt',
+  RemoteResponse = 'remote-response',
+  RemoteThought = 'remote-thought',
+  RemoteCodeDiff = 'remote-code-diff',
+  RemoteToolCall = 'remote-tool-call',
+  RequestRemoteHistory = 'request-remote-history',
+  RemoteDialog = 'remote-dialog',
+  RemoteDialogResponse = 'remote-dialog-response',
 }
 
 export interface AppEvents extends ExtensionEvents {
@@ -23,6 +31,18 @@ export interface AppEvents extends ExtensionEvents {
   [AppEvent.McpClientUpdate]: Array<Map<string, McpClient> | never>;
   [AppEvent.SelectionWarning]: never[];
   [AppEvent.PasteTimeout]: never[];
+  [AppEvent.RemotePrompt]: string[];
+  [AppEvent.RemoteResponse]: string[];
+  [AppEvent.RemoteThought]: string[];
+  [AppEvent.RemoteCodeDiff]: string[];
+  [AppEvent.RemoteToolCall]: string[];
+  [AppEvent.RequestRemoteHistory]: never[];
+  [AppEvent.RemoteDialog]: Array<{
+    type: string;
+    prompt: string;
+    options?: string[];
+  }>;
+  [AppEvent.RemoteDialogResponse]: string[];
 }
 
 export const appEvents = new EventEmitter<AppEvents>();

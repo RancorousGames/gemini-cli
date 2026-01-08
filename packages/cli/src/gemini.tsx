@@ -20,7 +20,11 @@ import {
   loadTrustedFolders,
   type TrustedFoldersError,
 } from './config/trustedFolders.js';
-import { loadSettings, SettingScope } from './config/settings.js';
+import {
+  loadSettings,
+  migrateDeprecatedSettings,
+  SettingScope,
+} from './config/settings.js';
 import { getStartupWarnings } from './utils/startupWarnings.js';
 import { getUserStartupWarnings } from './utils/userStartupWarnings.js';
 import { ConsolePatcher } from './ui/utils/ConsolePatcher.js';
@@ -89,11 +93,15 @@ import {
 } from './utils/relaunch.js';
 import { loadSandboxConfig } from './config/sandboxConfig.js';
 import { deleteSession, listSessions } from './utils/sessions.js';
+import { ExtensionManager } from './config/extension-manager.js';
+import { workspaceService } from './omni/WorkspaceService.js';
 import { createPolicyUpdater } from './config/policy.js';
+import { requestConsentNonInteractive } from './config/extensions/consent.js';
 import { ScrollProvider } from './ui/contexts/ScrollProvider.js';
 import { isAlternateBufferEnabled } from './ui/hooks/useAlternateBuffer.js';
 
 import { setupTerminalAndTheme } from './utils/terminalTheme.js';
+import { startRemoteControl } from './omni/remoteControl.js';
 import { profiler } from './ui/components/DebugProfiler.js';
 
 const SLOW_RENDER_MS = 200;
@@ -172,7 +180,7 @@ export async function startInteractiveUI(
   config: Config,
   settings: LoadedSettings,
   startupWarnings: string[],
-  workspaceRoot: string = process.cwd(),
+  workspaceRoot: string = workspaceService.getWorkspaceRoot(),
   resumedSessionData: ResumedSessionData | undefined,
   initializationResult: InitializationResult,
 ) {
@@ -285,6 +293,7 @@ export async function startInteractiveUI(
 export async function main() {
   const cliStartupHandle = startupProfiler.start('cli_startup');
   const cleanupStdio = patchStdio();
+  startRemoteControl();
   registerSyncCleanup(() => {
     // This is needed to ensure we don't lose any buffered output.
     initializeOutputListenersAndFlush();
@@ -293,7 +302,7 @@ export async function main() {
 
   setupUnhandledRejectionHandler();
   const loadSettingsHandle = startupProfiler.start('load_settings');
-  const settings = loadSettings();
+  let settings = await loadSettings();
   loadSettingsHandle?.end();
 
   // Report settings errors once during startup
@@ -309,11 +318,34 @@ export async function main() {
     );
   });
 
+  const migrateHandle = startupProfiler.start('migrate_settings');
+  migrateDeprecatedSettings(
+    settings,
+    // Temporary extension manager only used during this non-interactive UI phase.
+    new ExtensionManager({
+      workspaceDir: process.cwd(),
+      settings: settings.merged,
+      enabledExtensionOverrides: [],
+      requestConsent: requestConsentNonInteractive,
+      requestSetting: null,
+    }),
+  );
+  migrateHandle?.end();
   await cleanupCheckpoints();
 
   const parseArgsHandle = startupProfiler.start('parse_arguments');
   const argv = await parseArguments(settings.merged);
   parseArgsHandle?.end();
+
+  // Determine the effective workspace root and update the service
+  const effectiveWorkspaceRoot = argv.workspace || process.cwd();
+  workspaceService.setWorkspaceRoot(effectiveWorkspaceRoot);
+
+  // If the workspace root is different from the initial CWD, reload settings
+  // to ensure workspace-specific configurations are properly applied.
+  if (effectiveWorkspaceRoot !== process.cwd()) {
+    settings = await loadSettings(effectiveWorkspaceRoot);
+  }
 
   // Check for invalid input combinations early to prevent crashes
   if (argv.promptInteractive && !process.stdin.isTTY) {
@@ -356,51 +388,6 @@ export async function main() {
     }
   }
 
-  const partialConfig = await loadCliConfig(settings.merged, sessionId, argv, {
-    projectHooks: settings.workspace.settings.hooks,
-  });
-
-  // Refresh auth to fetch remote admin settings from CCPA and before entering
-  // the sandbox because the sandbox will interfere with the Oauth2 web
-  // redirect.
-  if (
-    settings.merged.security?.auth?.selectedType &&
-    !settings.merged.security?.auth?.useExternal
-  ) {
-    try {
-      if (partialConfig.isInteractive()) {
-        const err = validateAuthMethod(
-          settings.merged.security.auth.selectedType,
-        );
-        if (err) {
-          throw new Error(err);
-        }
-
-        await partialConfig.refreshAuth(
-          settings.merged.security.auth.selectedType,
-        );
-      } else {
-        const authType = await validateNonInteractiveAuth(
-          settings.merged.security?.auth?.selectedType,
-          settings.merged.security?.auth?.useExternal,
-          partialConfig,
-          settings,
-        );
-        await partialConfig.refreshAuth(authType);
-      }
-    } catch (err) {
-      debugLogger.error('Error authenticating:', err);
-      await runExitCleanup();
-      process.exit(ExitCodes.FATAL_AUTHENTICATION_ERROR);
-    }
-  }
-
-  const remoteAdminSettings = partialConfig.getRemoteAdminSettings();
-  // Set remote admin settings if returned from CCPA.
-  if (remoteAdminSettings) {
-    settings.setRemoteAdminSettings(remoteAdminSettings);
-  }
-
   // hop into sandbox if we are outside and sandboxing is enabled
   if (!process.env['SANDBOX']) {
     const memoryArgs = settings.merged.advanced?.autoConfigureMemory
@@ -414,6 +401,48 @@ export async function main() {
     // another way to decouple refreshAuth from requiring a config.
 
     if (sandboxConfig) {
+      const partialConfig = await loadCliConfig(
+        settings.merged,
+        sessionId,
+        argv,
+        {
+          cwd: effectiveWorkspaceRoot,
+          projectHooks: settings.workspace.settings.hooks,
+        },
+      );
+
+      if (
+        settings.merged.security?.auth?.selectedType &&
+        !settings.merged.security?.auth?.useExternal
+      ) {
+        try {
+          if (partialConfig.isInteractive()) {
+            // Validate authentication here because the sandbox will interfere with the Oauth2 web redirect.
+            const err = await validateAuthMethod(
+              settings.merged.security.auth.selectedType,
+            );
+            if (err) {
+              throw new Error(err);
+            }
+
+            await partialConfig.refreshAuth(
+              settings.merged.security.auth.selectedType,
+            );
+          } else {
+            const authType = await validateNonInteractiveAuth(
+              settings.merged.security?.auth?.selectedType,
+              settings.merged.security?.auth?.useExternal,
+              partialConfig,
+              settings,
+            );
+            await partialConfig.refreshAuth(authType);
+          }
+        } catch (err) {
+          debugLogger.error('Error authenticating:', err);
+          await runExitCleanup();
+          process.exit(ExitCodes.FATAL_AUTHENTICATION_ERROR);
+        }
+      }
       let stdinData = '';
       if (!process.stdin.isTTY) {
         stdinData = await readStdin();
@@ -462,6 +491,7 @@ export async function main() {
   {
     const loadConfigHandle = startupProfiler.start('load_cli_config');
     const config = await loadCliConfig(settings.merged, sessionId, argv, {
+      cwd: effectiveWorkspaceRoot,
       projectHooks: settings.workspace.settings.hooks,
     });
     loadConfigHandle?.end();
@@ -601,13 +631,14 @@ export async function main() {
     }
 
     cliStartupHandle?.end();
+
     // Render UI, passing necessary config values. Check that there is no command line question.
     if (config.isInteractive()) {
       await startInteractiveUI(
         config,
         settings,
         startupWarnings,
-        process.cwd(),
+        effectiveWorkspaceRoot,
         resumedSessionData,
         initializationResult,
       );
@@ -616,7 +647,6 @@ export async function main() {
 
     await config.initialize();
     startupProfiler.flush(config);
-
     // If not a TTY, read from stdin
     // This is for cases where the user pipes input directly into the command
     let stdinData: string | undefined = undefined;

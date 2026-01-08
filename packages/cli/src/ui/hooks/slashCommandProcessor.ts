@@ -207,7 +207,7 @@ export const useSlashCommandProcessor = (
         logger,
       },
       ui: {
-        addItem,
+        addItem: (itemData, baseTimestamp) => addItem(itemData, baseTimestamp),
         clear: () => {
           clearItems();
           refreshStatic();
@@ -404,6 +404,7 @@ export const useSlashCommandProcessor = (
                     },
                     Date.now(),
                   );
+
                   return { type: 'handled' };
                 case 'logout':
                   // Show logout confirmation dialog with Login/Exit options
@@ -568,6 +569,7 @@ export const useSlashCommandProcessor = (
               content: helpText,
               timestamp: new Date(),
             });
+
             return { type: 'handled' };
           }
         }
@@ -590,13 +592,15 @@ export const useSlashCommandProcessor = (
           });
           logSlashCommand(config, event);
         }
+        const errorText = e instanceof Error ? e.message : String(e);
         addItem(
           {
             type: MessageType.ERROR,
-            text: e instanceof Error ? e.message : String(e),
+            text: errorText,
           },
           Date.now(),
         );
+
         return { type: 'handled' };
       } finally {
         if (config && resolvedCommandPath[0] && !hasError) {

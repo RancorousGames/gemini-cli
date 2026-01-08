@@ -148,7 +148,7 @@ describe('extension tests', () => {
   let mockKeychainStorage: MockKeychainStorage;
   let keychainData: Record<string, string>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     keychainData = {};
     mockKeychainStorage = {
@@ -193,7 +193,7 @@ describe('extension tests', () => {
       workspaceDir: tempWorkspaceDir,
       requestConsent: mockRequestConsent,
       requestSetting: mockPromptForSettings,
-      settings: loadSettings(tempWorkspaceDir).merged,
+      settings: (await loadSettings(tempWorkspaceDir)).merged,
     });
     resetTrustedFoldersForTesting();
   });
@@ -823,9 +823,9 @@ describe('extension tests', () => {
           JSON.stringify(hooksConfig),
         );
 
-        const settings = loadSettings(tempWorkspaceDir).merged;
-        if (!settings.hooks) settings.hooks = {};
-        settings.hooks.enabled = true;
+        const settings = (await loadSettings(tempWorkspaceDir)).merged;
+        if (!settings.tools) settings.tools = {};
+        settings.tools.enableHooks = true;
 
         extensionManager = new ExtensionManager({
           workspaceDir: tempWorkspaceDir,
@@ -859,9 +859,9 @@ describe('extension tests', () => {
           JSON.stringify({ hooks: { BeforeTool: [] } }),
         );
 
-        const settings = loadSettings(tempWorkspaceDir).merged;
-        if (!settings.hooks) settings.hooks = {};
-        settings.hooks.enabled = false;
+        const settings = (await loadSettings(tempWorkspaceDir)).merged;
+        if (!settings.tools) settings.tools = {};
+        settings.tools.enableHooks = false;
 
         extensionManager = new ExtensionManager({
           workspaceDir: tempWorkspaceDir,
@@ -1438,7 +1438,7 @@ This extension will run the following MCP servers:
         workspaceDir: tempWorkspaceDir,
         requestConsent: mockRequestConsent,
         requestSetting: null,
-        settings: loadSettings(tempWorkspaceDir).merged,
+        settings: (await loadSettings(tempWorkspaceDir)).merged,
       });
 
       await extensionManager.loadExtensions();

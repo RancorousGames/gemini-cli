@@ -12,11 +12,12 @@ import { debugLogger } from '@google/gemini-cli-core';
 
 export async function getExtensionManager() {
   const workspaceDir = process.cwd();
+  const settings = await loadSettings(workspaceDir);
   const extensionManager = new ExtensionManager({
     workspaceDir,
     requestConsent: requestConsentNonInteractive,
     requestSetting: promptForSetting,
-    settings: loadSettings(workspaceDir).merged,
+    settings: settings.merged,
   });
   await extensionManager.loadExtensions();
   return extensionManager;

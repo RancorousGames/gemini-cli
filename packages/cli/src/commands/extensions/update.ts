@@ -31,7 +31,8 @@ const updateOutput = (info: ExtensionUpdateInfo) =>
 
 export async function handleUpdate(args: UpdateArgs) {
   const workspaceDir = process.cwd();
-  const settings = loadSettings(workspaceDir).merged;
+  const loadedSettings = await loadSettings(workspaceDir);
+  const settings = loadedSettings.merged;
   const extensionManager = new ExtensionManager({
     workspaceDir,
     requestConsent: requestConsentNonInteractive,

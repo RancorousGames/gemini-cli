@@ -39,11 +39,12 @@ export async function handleLink(args: InstallArgs) {
       debugLogger.log(INSTALL_WARNING_MESSAGE);
     }
     const workspaceDir = process.cwd();
+    const settings = await loadSettings(workspaceDir);
     const extensionManager = new ExtensionManager({
       workspaceDir,
       requestConsent,
       requestSetting: promptForSetting,
-      settings: loadSettings(workspaceDir).merged,
+      settings: settings.merged,
     });
     await extensionManager.loadExtensions();
     const extension =
