@@ -145,6 +145,13 @@ more maintainable.
 Only write high-value comments if at all. Avoid talking to the user through
 comments.
 
+## Tests policy
+
+Tests are NOT a priority for this project. Do NOT care about tests. If any changes
+made by you result in test failures or if you are tempted to update tests to 
+match code changes, simply REVERT all changes to test files. Never spend time 
+fixing or updating tests unless explicitly asked.
+
 ## Logging and Error Handling
 
 - **Avoid Console Statements:** Do not use `console.log`, `console.error`, or
