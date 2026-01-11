@@ -5,13 +5,21 @@
  */
 
 /* eslint-disable react/prop-types */
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useContext } from 'react';
 import { useUIState } from '../ui/contexts/UIStateContext.js';
 import { useUIActions } from '../ui/contexts/UIActionsContext.js';
 import { appEvents, AppEvent } from '../utils/events.js';
-import { debugLogger, ToolConfirmationOutcome } from '@google/gemini-cli-core';
+import {
+  debugLogger,
+  ToolConfirmationOutcome,
+  PREVIEW_GEMINI_MODEL_AUTO,
+  DEFAULT_GEMINI_MODEL_AUTO,
+  ModelSlashCommandEvent,
+  logModelSlashCommand,
+} from '@google/gemini-cli-core';
 import { ToolCallStatus } from '../ui/types.js';
 import { FolderTrustChoice } from '../ui/components/FolderTrustDialog.js';
+import { ConfigContext } from '../ui/contexts/ConfigContext.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -24,6 +32,7 @@ import * as path from 'node:path';
 export const OmniDialogManager = () => {
   const uiState = useUIState();
   const uiActions = useUIActions();
+  const config = useContext(ConfigContext);
 
   const lastDialogKeyRef = useRef<string | null>(null);
   const notifiedCallIdsRef = useRef<Set<string>>(new Set());
@@ -31,7 +40,10 @@ export const OmniDialogManager = () => {
     Map<string, (outcome: ToolConfirmationOutcome) => void>
   >(new Map());
 
-  const getLogPath = useCallback(() => 'D:\\SSDProjects\\Tools\\gemini-cli\\Omni\\dialogs.log', []);
+  const getLogPath = useCallback(
+    () => 'D:\\SSDProjects\\Tools\\gemini-cli\\Omni\\dialogs.log',
+    [],
+  );
 
   const extractText = useCallback((node: unknown): string => {
     if (node == null) return '';
@@ -129,9 +141,22 @@ export const OmniDialogManager = () => {
           userSelection: response as 'yes' | 'no' | 'dismiss',
           isExtensionPreInstalled: false,
         });
+      } else if (type === 'model_dialog') {
+        if (response === 'close') {
+          uiActions.closeModelDialog();
+        } else if (config) {
+          config.setModel(response, true);
+          const event = new ModelSlashCommandEvent(response);
+          logModelSlashCommand(config, event);
+          uiActions.closeModelDialog();
+        }
+      } else if (type === 'auth_in_progress') {
+        if (response === 'cancel') {
+          uiActions.onAuthError('Authentication cancelled.');
+        }
       }
     },
-    [uiState, uiActions],
+    [uiState, uiActions, config],
   );
 
   // Effect for global dialogs
@@ -205,16 +230,22 @@ export const OmniDialogManager = () => {
         options: ['close'],
       };
     } else if (uiState.isModelDialogOpen) {
+      const modelOptions = [
+        PREVIEW_GEMINI_MODEL_AUTO,
+        DEFAULT_GEMINI_MODEL_AUTO,
+        'Manual',
+        'close',
+      ];
       currentDialog = {
         type: 'model_dialog',
         prompt: 'Select Model',
-        options: ['close'],
+        options: modelOptions,
       };
     } else if (uiState.isAuthenticating) {
       currentDialog = {
         type: 'auth_in_progress',
         prompt: 'Authentication in progress...',
-        options: ['cancel'],
+        options: [], // Purely informational on Android
       };
     } else if (uiState.isAwaitingApiKeyInput) {
       currentDialog = {
