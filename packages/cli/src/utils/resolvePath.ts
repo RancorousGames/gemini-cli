@@ -8,7 +8,7 @@ import * as path from 'node:path';
 import { homedir } from '@google/gemini-cli-core';
 
 export function resolvePath(p: string): string {
-  if (!p) {
+  if (typeof p !== 'string' || !p) {
     return '';
   }
   let expandedPath = p;

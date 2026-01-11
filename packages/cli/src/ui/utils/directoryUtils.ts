@@ -13,7 +13,7 @@ const MAX_SUGGESTIONS = 50;
 const MATCH_BUFFER_MULTIPLIER = 3;
 
 export function expandHomeDir(p: string): string {
-  if (!p) {
+  if (typeof p !== 'string' || !p) {
     return '';
   }
   let expandedPath = p;

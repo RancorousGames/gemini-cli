@@ -338,7 +338,10 @@ export async function main() {
   parseArgsHandle?.end();
 
   // Determine the effective workspace root and update the service
-  const effectiveWorkspaceRoot = argv.workspace || process.cwd();
+  const effectiveWorkspaceRoot =
+    (Array.isArray(argv.workspace)
+      ? argv.workspace[argv.workspace.length - 1]
+      : argv.workspace) || process.cwd();
   workspaceService.setWorkspaceRoot(effectiveWorkspaceRoot);
 
   // If the workspace root is different from the initial CWD, reload settings

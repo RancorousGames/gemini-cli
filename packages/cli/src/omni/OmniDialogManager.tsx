@@ -10,7 +10,6 @@ import { useUIState } from '../ui/contexts/UIStateContext.js';
 import { useUIActions } from '../ui/contexts/UIActionsContext.js';
 import { appEvents, AppEvent } from '../utils/events.js';
 import { debugLogger, ToolConfirmationOutcome } from '@google/gemini-cli-core';
-import { workspaceService } from './WorkspaceService.js';
 import { ToolCallStatus } from '../ui/types.js';
 import { FolderTrustChoice } from '../ui/components/FolderTrustDialog.js';
 import * as fs from 'node:fs';
@@ -32,13 +31,7 @@ export const OmniDialogManager = () => {
     Map<string, (outcome: ToolConfirmationOutcome) => void>
   >(new Map());
 
-  const getLogPath = useCallback(() => {
-    const root = workspaceService.getWorkspaceRoot();
-    if (path.basename(root).toLowerCase() === 'omni') {
-      return path.join(root, 'dialogs.log');
-    }
-    return path.join(root, 'Omni', 'dialogs.log');
-  }, []);
+  const getLogPath = useCallback(() => 'D:\\SSDProjects\\Tools\\gemini-cli\\Omni\\dialogs.log', []);
 
   const extractText = useCallback((node: unknown): string => {
     if (node == null) return '';
