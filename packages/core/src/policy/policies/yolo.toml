@@ -27,7 +27,7 @@
 
 [[rule]]
 decision = "allow"
-priority = 999
+priority = 997
 modes = ["yolo"]
 allow_redirection = true
 
@@ -35,12 +35,13 @@ allow_redirection = true
 toolName = "run_shell_command"
 commandPrefix = "git"
 decision = "allow"
-priority = 1000
+priority = 998
 modes = ["yolo"]
+allow_redirection = true
 
 [[rule]]
 toolName = "run_shell_command"
 commandRegex = 'git\s+(reset|checkout\s+--|restore|clean).*'
 decision = "ask_user"
-priority = 1001
+priority = 999
 modes = ["yolo"]
