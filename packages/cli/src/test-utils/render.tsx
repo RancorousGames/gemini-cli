@@ -109,7 +109,7 @@ export const mockSettings = new LoadedSettings(
   { path: '', settings: {}, originalSettings: {} },
   { path: '', settings: {}, originalSettings: {} },
   true,
-  [],
+  new Set(),
 );
 
 export const createMockSettings = (
@@ -122,7 +122,7 @@ export const createMockSettings = (
     { path: '', settings, originalSettings: settings },
     { path: '', settings: {}, originalSettings: {} },
     true,
-    [],
+    new Set(),
   );
 };
 
@@ -149,6 +149,7 @@ const mockUIActions: UIActions = {
   exitPrivacyNotice: vi.fn(),
   closeSettingsDialog: vi.fn(),
   closeModelDialog: vi.fn(),
+  setModelDialogView: vi.fn(),
   openPermissionsDialog: vi.fn(),
   openSessionBrowser: vi.fn(),
   closeSessionBrowser: vi.fn(),
