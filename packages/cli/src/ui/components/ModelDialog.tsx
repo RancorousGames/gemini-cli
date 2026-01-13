@@ -23,6 +23,7 @@ import { useKeypress } from '../hooks/useKeypress.js';
 import { theme } from '../semantic-colors.js';
 import { DescriptiveRadioButtonSelect } from './shared/DescriptiveRadioButtonSelect.js';
 import { ConfigContext } from '../contexts/ConfigContext.js';
+import { useUIActions } from '../contexts/UIActionsContext.js';
 import { ThemedGradient } from './ThemedGradient.js';
 
 interface ModelDialogProps {
@@ -31,7 +32,17 @@ interface ModelDialogProps {
 
 export function ModelDialog({ onClose }: ModelDialogProps): React.JSX.Element {
   const config = useContext(ConfigContext);
-  const [view, setView] = useState<'main' | 'manual'>('main');
+  const { setModelDialogView } = useUIActions();
+  const [view, setViewInternal] = useState<'main' | 'manual'>('main');
+
+  const setView = useCallback(
+    (v: 'main' | 'manual') => {
+      setViewInternal(v);
+      setModelDialogView(v);
+    },
+    [setModelDialogView],
+  );
+
   const [persistMode, setPersistMode] = useState(false);
 
   // Determine the Preferred Model (read once when the dialog opens).
@@ -167,7 +178,7 @@ export function ModelDialog({ onClose }: ModelDialogProps): React.JSX.Element {
       }
       onClose();
     },
-    [config, onClose, persistMode],
+    [config, onClose, persistMode, setView],
   );
 
   let header;

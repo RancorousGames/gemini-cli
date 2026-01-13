@@ -199,10 +199,17 @@ of the refactor. Because we chose to modernize the CLI's foundation (Async/Await
   - Implemented `RequestRemoteHistory` handler to stream serialized state back
     to the Hub.
   - Emits `[TURN_FINISHED]` marker when the AI completes its cycle.
+  - Dynamically calculates `availableModels` based on preview features and
+    access.
 - **`packages/cli/src/omni/OmniDialogManager.tsx`**:
   - Fixed TypeScript compilation errors related to
     `noPropertyAccessFromIndexSignature`.
   - Corrected mapping for `FolderTrustChoice` in auto-response handling.
+  - Enhanced `model_dialog` to support view switching (Main/Manual) and dynamic
+    model options.
+  - Added `[DIALOG_FINISHED]` marker emission when a dialog is closed.
+  - Improved remote response handling with `handleAutoResponseRef` to prevent
+    stale closures.
 - **`packages/cli/src/ui/hooks/useGeminiStream.ts`**:
   - Streams AI "thoughts" (reasoning) to the `RemoteThought` event.
   - Forwards raw tool call requests to the IPC layer for real-time progress

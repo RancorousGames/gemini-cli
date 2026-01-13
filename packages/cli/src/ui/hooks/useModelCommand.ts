@@ -8,14 +8,20 @@ import { useState, useCallback } from 'react';
 
 interface UseModelCommandReturn {
   isModelDialogOpen: boolean;
+  modelDialogView: 'main' | 'manual';
   openModelDialog: () => void;
   closeModelDialog: () => void;
+  setModelDialogView: (view: 'main' | 'manual') => void;
 }
 
 export const useModelCommand = (): UseModelCommandReturn => {
   const [isModelDialogOpen, setIsModelDialogOpen] = useState(false);
+  const [modelDialogView, setModelDialogView] = useState<'main' | 'manual'>(
+    'main',
+  );
 
   const openModelDialog = useCallback(() => {
+    setModelDialogView('main');
     setIsModelDialogOpen(true);
   }, []);
 
@@ -25,7 +31,9 @@ export const useModelCommand = (): UseModelCommandReturn => {
 
   return {
     isModelDialogOpen,
+    modelDialogView,
     openModelDialog,
     closeModelDialog,
+    setModelDialogView,
   };
 };

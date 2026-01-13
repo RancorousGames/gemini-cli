@@ -60,6 +60,13 @@ import {
   SessionStartSource,
   SessionEndReason,
   generateSummary,
+  DEFAULT_GEMINI_MODEL_AUTO,
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_GEMINI_FLASH_MODEL,
+  DEFAULT_GEMINI_FLASH_LITE_MODEL,
+  PREVIEW_GEMINI_MODEL_AUTO,
+  PREVIEW_GEMINI_MODEL,
+  PREVIEW_GEMINI_FLASH_MODEL,
 } from '@google/gemini-cli-core';
 import { validateAuthMethod } from '../config/auth.js';
 import process from 'node:process';
@@ -629,8 +636,30 @@ Logging in with Google... Restarting Gemini CLI to continue.
   const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } =
     useSettingsCommand();
 
-  const { isModelDialogOpen, openModelDialog, closeModelDialog } =
-    useModelCommand();
+  const {
+    isModelDialogOpen,
+    modelDialogView,
+    openModelDialog,
+    closeModelDialog,
+    setModelDialogView,
+  } = useModelCommand();
+  const availableModels = useMemo(() => {
+    const list = [
+      DEFAULT_GEMINI_MODEL_AUTO,
+      DEFAULT_GEMINI_MODEL,
+      DEFAULT_GEMINI_FLASH_MODEL,
+      DEFAULT_GEMINI_FLASH_LITE_MODEL,
+    ];
+
+    if (config?.getPreviewFeatures() && config.getHasAccessToPreviewModel()) {
+      list.unshift(
+        PREVIEW_GEMINI_MODEL_AUTO,
+        PREVIEW_GEMINI_MODEL,
+        PREVIEW_GEMINI_FLASH_MODEL,
+      );
+    }
+    return list;
+  }, [config]);
 
   const { toggleVimEnabled } = useVimMode();
 
@@ -1565,6 +1594,8 @@ Logging in with Google... Restarting Gemini CLI to continue.
       isSettingsDialogOpen,
       isSessionBrowserOpen,
       isModelDialogOpen,
+      modelDialogView,
+      availableModels,
       isPermissionsDialogOpen,
       permissionsDialogProps,
       slashCommands,
@@ -1656,6 +1687,8 @@ Logging in with Google... Restarting Gemini CLI to continue.
       isSettingsDialogOpen,
       isSessionBrowserOpen,
       isModelDialogOpen,
+      modelDialogView,
+      availableModels,
       isPermissionsDialogOpen,
       permissionsDialogProps,
       slashCommands,
@@ -1754,6 +1787,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
       exitPrivacyNotice,
       closeSettingsDialog,
       closeModelDialog,
+      setModelDialogView,
       openPermissionsDialog,
       closePermissionsDialog,
       setShellModeActive,
@@ -1789,6 +1823,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
       exitPrivacyNotice,
       closeSettingsDialog,
       closeModelDialog,
+      setModelDialogView,
       openPermissionsDialog,
       closePermissionsDialog,
       setShellModeActive,

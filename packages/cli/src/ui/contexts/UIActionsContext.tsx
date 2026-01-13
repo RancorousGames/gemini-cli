@@ -32,6 +32,7 @@ export interface UIActions {
   exitPrivacyNotice: () => void;
   closeSettingsDialog: () => void;
   closeModelDialog: () => void;
+  setModelDialogView: (view: 'main' | 'manual') => void;
   openPermissionsDialog: (props?: PermissionsDialogProps) => void;
   closePermissionsDialog: () => void;
   setShellModeActive: (value: boolean) => void;

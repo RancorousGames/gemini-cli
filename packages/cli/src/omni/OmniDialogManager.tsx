@@ -12,8 +12,6 @@ import { appEvents, AppEvent } from '../utils/events.js';
 import {
   debugLogger,
   ToolConfirmationOutcome,
-  PREVIEW_GEMINI_MODEL_AUTO,
-  DEFAULT_GEMINI_MODEL_AUTO,
   ModelSlashCommandEvent,
   logModelSlashCommand,
 } from '@google/gemini-cli-core';
@@ -29,6 +27,9 @@ import * as path from 'node:path';
  * 2. Forwards them to the Hub.
  * 3. The Hub will decide whether to auto-answer based on its internal config.
  */
+
+const isDangerousGitCommand = (command: string): boolean => /git\s+(reset|checkout\s+--|restore|clean).*/.test(command);
+
 export const OmniDialogManager = () => {
   const uiState = useUIState();
   const uiActions = useUIActions();
@@ -144,6 +145,8 @@ export const OmniDialogManager = () => {
       } else if (type === 'model_dialog') {
         if (response === 'close') {
           uiActions.closeModelDialog();
+        } else if (response === 'Manual') {
+          uiActions.setModelDialogView('manual');
         } else if (config) {
           config.setModel(response, true);
           const event = new ModelSlashCommandEvent(response);
@@ -193,11 +196,20 @@ export const OmniDialogManager = () => {
         options: ['trust', 'no_trust'],
       };
     } else if (uiState.shellConfirmationRequest) {
-      currentDialog = {
-        type: 'shell_confirmation',
-        prompt: uiState.shellConfirmationRequest.commands.join('\n'),
-        options: ['yes', 'no'],
-      };
+      const isDangerous = uiState.shellConfirmationRequest.commands.some(
+        (cmd) => isDangerousGitCommand(cmd),
+      );
+      if (!isDangerous) {
+        currentDialog = {
+          type: 'shell_confirmation',
+          prompt: uiState.shellConfirmationRequest.commands.join('\n'),
+          options: ['yes', 'no'],
+        };
+      } else {
+        debugLogger.log(
+          `[OmniDialogManager] Dangerous git command detected. Bypassing Omni Hub.`,
+        );
+      }
     } else if (uiState.loopDetectionConfirmationRequest) {
       currentDialog = {
         type: 'loop_detection',
@@ -230,22 +242,25 @@ export const OmniDialogManager = () => {
         options: ['close'],
       };
     } else if (uiState.isModelDialogOpen) {
-      const modelOptions = [
-        PREVIEW_GEMINI_MODEL_AUTO,
-        DEFAULT_GEMINI_MODEL_AUTO,
-        'Manual',
-        'close',
-      ];
+      const modelOptions = [...uiState.availableModels];
+      if (uiState.modelDialogView === 'main') {
+        modelOptions.push('Manual');
+      }
+      modelOptions.push('close');
+
       currentDialog = {
         type: 'model_dialog',
-        prompt: 'Select Model',
+        prompt:
+          uiState.modelDialogView === 'main'
+            ? 'Select Model'
+            : 'Select Model (Manual)',
         options: modelOptions,
       };
     } else if (uiState.isAuthenticating) {
       currentDialog = {
         type: 'auth_in_progress',
         prompt: 'Authentication in progress...',
-        options: [], // Purely informational on Android
+        options: [],
       };
     } else if (uiState.isAwaitingApiKeyInput) {
       currentDialog = {
@@ -304,7 +319,12 @@ export const OmniDialogManager = () => {
         appEvents.emit(AppEvent.RemoteDialog, currentDialog);
         lastDialogKeyRef.current = dialogKey;
       }
-    } else {
+    } else if (lastDialogKeyRef.current !== null) {
+      // Dialog was closed
+      debugLogger.log(
+        `[OmniDialogManager] Global dialog closed. Clearing remote.`,
+      );
+      appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       lastDialogKeyRef.current = null;
     }
   }, [
@@ -320,9 +340,11 @@ export const OmniDialogManager = () => {
     uiState.isThemeDialogOpen,
     uiState.isSettingsDialogOpen,
     uiState.isModelDialogOpen,
+    uiState.modelDialogView,
+    uiState.availableModels,
     uiState.isAuthenticating,
-    uiState.isAwaitingApiKeyInput,
     uiState.isAuthDialogOpen,
+    uiState.isAwaitingApiKeyInput,
     uiState.isEditorDialogOpen,
     uiState.showPrivacyNotice,
     uiState.isSessionBrowserOpen,
@@ -358,6 +380,12 @@ export const OmniDialogManager = () => {
               const details = tool.confirmationDetails;
 
               if (details.type === 'exec') {
+                if (isDangerousGitCommand(details.command)) {
+                  debugLogger.log(
+                    `[OmniDialogManager] Dangerous git tool call detected. Bypassing Omni Hub.`,
+                  );
+                  continue;
+                }
                 prompt = `Allow execution of: '${details.command}'?`;
               } else if (details.type === 'edit') {
                 prompt = `Apply changes to ${details.fileName}?`;
@@ -400,6 +428,11 @@ export const OmniDialogManager = () => {
     }
   }, [uiState.history, uiState.pendingHistoryItems, logDialog]);
 
+  const handleAutoResponseRef = useRef(handleAutoResponse);
+  useEffect(() => {
+    handleAutoResponseRef.current = handleAutoResponse;
+  }, [handleAutoResponse]);
+
   useEffect(() => {
     const onRemoteResponse = (response: string) => {
       debugLogger.log(
@@ -408,7 +441,7 @@ export const OmniDialogManager = () => {
       const key = lastDialogKeyRef.current;
       if (key) {
         const type = key.split(':')[0];
-        handleAutoResponse(type, response);
+        handleAutoResponseRef.current(type, response);
       } else {
         // Fallback: check if it's a tool response
         const lastNotifiedCallId = Array.from(notifiedCallIdsRef.current).pop();
@@ -416,7 +449,7 @@ export const OmniDialogManager = () => {
           debugLogger.log(
             `[OmniDialogManager] Routing response to last notified tool: ${lastNotifiedCallId}`,
           );
-          handleAutoResponse(`tool:${lastNotifiedCallId}`, response);
+          handleAutoResponseRef.current(`tool:${lastNotifiedCallId}`, response);
         } else {
           debugLogger.warn(
             `[OmniDialogManager] Received remote response but no active dialog or tool found.`,
@@ -429,7 +462,7 @@ export const OmniDialogManager = () => {
     return () => {
       appEvents.off(AppEvent.RemoteDialogResponse, onRemoteResponse);
     };
-  }, [handleAutoResponse]);
+  }, []);
 
   return null;
 };
