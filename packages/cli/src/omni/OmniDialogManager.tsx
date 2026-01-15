@@ -28,7 +28,8 @@ import * as path from 'node:path';
  * 3. The Hub will decide whether to auto-answer based on its internal config.
  */
 
-const isDangerousGitCommand = (command: string): boolean => /git\s+(reset|checkout\s+--|restore|clean).*/.test(command);
+const isDangerousGitCommand = (command: string): boolean =>
+  /git\s+(reset|checkout\s+--|restore|clean).*/.test(command);
 
 export const OmniDialogManager = () => {
   const uiState = useUIState();
@@ -103,6 +104,7 @@ export const OmniDialogManager = () => {
               ? ToolConfirmationOutcome.ProceedOnce
               : ToolConfirmationOutcome.Cancel;
           onConfirm(outcome);
+          appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
           return;
         } else {
           debugLogger.warn(
@@ -113,11 +115,13 @@ export const OmniDialogManager = () => {
 
       if (type === 'confirmation' && uiState.confirmationRequest) {
         uiState.confirmationRequest.onConfirm(response === 'yes');
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       } else if (
         type === 'extension_update' &&
         uiState.confirmUpdateExtensionRequests.length > 0
       ) {
         uiState.confirmUpdateExtensionRequests[0].onConfirm(response === 'yes');
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       } else if (
         type === 'shell_confirmation' &&
         uiState.shellConfirmationRequest
@@ -127,21 +131,25 @@ export const OmniDialogManager = () => {
             ? ToolConfirmationOutcome.ProceedOnce
             : ToolConfirmationOutcome.Cancel;
         uiState.shellConfirmationRequest.onConfirm(outcome);
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       } else if (type === 'pro_quota' && uiState.proQuotaRequest) {
         uiActions.handleProQuotaChoice(
           response as 'retry_later' | 'retry_once' | 'retry_always' | 'upgrade',
         );
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       } else if (type === 'folder_trust' && uiState.isFolderTrustDialogOpen) {
         const choice =
           response === 'trust'
             ? FolderTrustChoice.TRUST_FOLDER
             : FolderTrustChoice.DO_NOT_TRUST;
         uiActions.handleFolderTrustSelect(choice);
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       } else if (type === 'ide_nudge' && uiState.shouldShowIdePrompt) {
         uiActions.handleIdePromptComplete({
           userSelection: response as 'yes' | 'no' | 'dismiss',
           isExtensionPreInstalled: false,
         });
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       } else if (type === 'model_dialog') {
         if (response === 'close') {
           uiActions.closeModelDialog();
@@ -153,9 +161,11 @@ export const OmniDialogManager = () => {
           logModelSlashCommand(config, event);
           uiActions.closeModelDialog();
         }
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       } else if (type === 'auth_in_progress') {
         if (response === 'cancel') {
           uiActions.onAuthError('Authentication cancelled.');
+          appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
         }
       }
     },
