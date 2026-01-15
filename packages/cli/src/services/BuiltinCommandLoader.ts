@@ -24,6 +24,7 @@ import { copyCommand } from '../ui/commands/copyCommand.js';
 import { corgiCommand } from '../ui/commands/corgiCommand.js';
 import { docsCommand } from '../ui/commands/docsCommand.js';
 import { directoryCommand } from '../ui/commands/directoryCommand.js';
+import { dumpCommand } from '../ui/commands/dumpCommand.js';
 import { editorCommand } from '../ui/commands/editorCommand.js';
 import { extensionsCommand } from '../ui/commands/extensionsCommand.js';
 import { helpCommand } from '../ui/commands/helpCommand.js';
@@ -78,6 +79,7 @@ export class BuiltinCommandLoader implements ICommandLoader {
       corgiCommand,
       docsCommand,
       directoryCommand,
+      dumpCommand,
       editorCommand,
       ...(this.config?.getExtensionsEnabled() === false
         ? [

@@ -303,6 +303,7 @@ ${(function () {
 
 ## Interaction Details
 - **Help Command:** The user can use '/help' to display help information.
+- **Dump Command:** The user can use '/dump' to dump the conversation history to SessionDump.txt.
 - **Feedback:** To report a bug or provide feedback, please use the /bug command.`,
       sandbox: `
 ${(function () {
