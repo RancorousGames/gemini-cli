@@ -202,6 +202,9 @@ of the refactor. Because we chose to modernize the CLI's foundation (Async/Await
   - Dynamically calculates `availableModels` based on preview features and
     access.
 - **`packages/cli/src/omni/OmniDialogManager.tsx`**:
+  - Added `AUTO_HANDLERS` mechanism to automatically respond to specific dialog
+    prompts (e.g., auto-replying `retry_always` to "high demand" pro quota
+    messages).
   - Fixed an infinite recursion bug where `onRemoteResponse` would react to its own `[DIALOG_FINISHED]` signal, causing a "Maximum call stack size exceeded" crash.
   - Fixed TypeScript compilation errors related to
     `noPropertyAccessFromIndexSignature`.

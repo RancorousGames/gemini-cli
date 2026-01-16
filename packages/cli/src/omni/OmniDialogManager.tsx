@@ -31,6 +31,18 @@ import * as path from 'node:path';
 const isDangerousGitCommand = (command: string): boolean =>
   /git\s+(reset|checkout\s+--|restore|clean).*/.test(command);
 
+const AUTO_HANDLERS: Array<{
+  type: string;
+  promptMatch: RegExp | string;
+  response: string;
+}> = [
+  {
+    type: 'pro_quota',
+    promptMatch: /currently experiencing high demand/i,
+    response: 'retry_always',
+  },
+];
+
 export const OmniDialogManager = () => {
   const uiState = useUIState();
   const uiActions = useUIActions();
@@ -171,6 +183,11 @@ export const OmniDialogManager = () => {
     },
     [uiState, uiActions, config],
   );
+
+  const handleAutoResponseRef = useRef(handleAutoResponse);
+  useEffect(() => {
+    handleAutoResponseRef.current = handleAutoResponse;
+  }, [handleAutoResponse]);
 
   // Effect for global dialogs
   useEffect(() => {
@@ -323,6 +340,30 @@ export const OmniDialogManager = () => {
       const dialogKey = `${currentDialog.type}:${currentDialog.prompt}`;
       if (lastDialogKeyRef.current !== dialogKey) {
         logDialog(currentDialog);
+
+        const autoHandler = AUTO_HANDLERS.find(
+          (h) =>
+            h.type === currentDialog!.type &&
+            (typeof h.promptMatch === 'string'
+              ? currentDialog!.prompt.includes(h.promptMatch)
+              : h.promptMatch.test(currentDialog!.prompt)),
+        );
+
+        if (autoHandler) {
+          debugLogger.log(
+            `[OmniDialogManager] Auto-handling ${currentDialog.type}: ${autoHandler.response}`,
+          );
+          // Small delay to ensure state is stable and log is written
+          setTimeout(() => {
+            handleAutoResponseRef.current(
+              autoHandler.type,
+              autoHandler.response,
+            );
+          }, 100);
+          lastDialogKeyRef.current = dialogKey;
+          return;
+        }
+
         debugLogger.log(
           `[OmniDialogManager] Notifying hub of global dialog: ${currentDialog.type}`,
         );
