@@ -42,6 +42,7 @@ import {
 } from '../telemetry/types.js';
 import { handleFallback } from '../fallback/handler.js';
 import { isFunctionResponse } from '../utils/messageInspectors.js';
+import { getErrorMessage } from '../utils/errors.js';
 import { partListUnionToString } from './geminiRequest.js';
 import type { ModelConfigKey } from '../services/modelConfigService.js';
 import { estimateTokenCountSync } from '../utils/tokenCalculation.js';
@@ -423,6 +424,11 @@ export class GeminiChat {
           }
           throw lastError;
         }
+      } catch (error) {
+        if (isMismatchedFunctionPartsError(error)) {
+          this.history.pop();
+        }
+        throw error;
       } finally {
         streamDoneResolver!();
       }
@@ -973,4 +979,11 @@ export function isSchemaDepthError(errorMessage: string): boolean {
 
 export function isInvalidArgumentError(errorMessage: string): boolean {
   return errorMessage.includes('Request contains an invalid argument');
+}
+
+export function isMismatchedFunctionPartsError(error: unknown): boolean {
+  const message = getErrorMessage(error);
+  return message.includes(
+    'number of function response parts is equal to the number of function call parts',
+  );
 }

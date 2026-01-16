@@ -1497,6 +1497,36 @@ describe('GeminiChat', () => {
         ).toBe(true);
       });
 
+      it('should rollback history when mismatched function parts error occurs', async () => {
+        const mismatchError = new Error(
+          'Please ensure that the number of function response parts is equal to the number of function call parts of the function call turn.',
+        );
+
+        vi.mocked(mockContentGenerator.generateContentStream).mockRejectedValue(
+          mismatchError,
+        );
+
+        const initialHistoryLength = chat.getHistory().length;
+
+        const stream = await chat.sendMessageStream(
+          { model: 'test-model' },
+          'test message',
+          'prompt-id-mismatch',
+          new AbortController().signal,
+        );
+
+        await expect(
+          (async () => {
+            for await (const _ of stream) {
+              /* consume stream */
+            }
+          })(),
+        ).rejects.toThrow(mismatchError);
+
+        // History should be back to initial state (the failed turn should be popped)
+        expect(chat.getHistory().length).toBe(initialHistoryLength);
+      });
+
       afterEach(() => {
         // Reset to default behavior
         mockRetryWithBackoff.mockImplementation(async (apiCall) => apiCall());

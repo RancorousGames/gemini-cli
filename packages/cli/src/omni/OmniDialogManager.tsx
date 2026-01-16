@@ -479,11 +479,6 @@ export const OmniDialogManager = () => {
     }
   }, [uiState.history, uiState.pendingHistoryItems, logDialog]);
 
-  const handleAutoResponseRef = useRef(handleAutoResponse);
-  useEffect(() => {
-    handleAutoResponseRef.current = handleAutoResponse;
-  }, [handleAutoResponse]);
-
   useEffect(() => {
     const onRemoteResponse = (response: string) => {
       if (response === '[DIALOG_FINISHED]') return;
