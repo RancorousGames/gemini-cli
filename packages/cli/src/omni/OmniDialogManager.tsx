@@ -351,15 +351,15 @@ export const OmniDialogManager = () => {
 
         if (autoHandler) {
           debugLogger.log(
-            `[OmniDialogManager] Auto-handling ${currentDialog.type}: ${autoHandler.response}`,
+            `[OmniDialogManager] Auto-handling ${currentDialog!.type}: ${autoHandler.response}`,
           );
-          // Small delay to ensure state is stable and log is written
+          // Wait 5 seconds before submitting to avoid spamming during high demand
           setTimeout(() => {
             handleAutoResponseRef.current(
               autoHandler.type,
               autoHandler.response,
             );
-          }, 100);
+          }, 5000);
           lastDialogKeyRef.current = dialogKey;
           return;
         }
