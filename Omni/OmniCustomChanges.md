@@ -239,3 +239,17 @@ files have been **reverted** to their original state. As a result, many core
 tests will currently fail due to the asynchronous startup refactor. Verification
 of custom OmniSync features is handled via external roundtrip tests (e.g.,
 `roundtrip_test.py`).
+
+## API Error Resilience
+
+To address a persistent issue where the Gemini API returns a 400 `INVALID_ARGUMENT` error with the message "Please ensure that the number of function response parts is equal to the number of function call parts", a surgical fix was applied to the core client logic.
+
+### 1. Core Logic Fix (`packages/core/src/core/geminiChat.ts`)
+- **Problem:** When the user provides input that leads to a mismatched state (e.g., during tool use loops), the invalid state remains in the chat history. Subsequent attempts to "continue" or retry simply re-send the same invalid history, causing an infinite loop of 400 errors.
+- **Solution:** Modified `sendMessageStream` to catch this specific error using a new helper `isMismatchedFunctionPartsError`. When detected, the client automatically performs a **history rollback** by popping the last user entry (which triggered the bad state) from `this.history`. This returns the conversation to a valid state, allowing the user to retry or the system to recover gracefully.
+
+### 2. Verification (`packages/core/src/core/geminiChat.test.ts`)
+- Added a specific test case: `should rollback history when mismatched function parts error occurs`. This verifies that:
+  1. The specific 400 error is caught.
+  2. The history length decreases by one (rolling back the failed turn).
+  3. The error is still re-thrown to inform the caller (so the UI can show the error), but the internal state is clean for the next attempt.
