@@ -445,6 +445,7 @@ export const OmniDialogManager = () => {
 
   useEffect(() => {
     const onRemoteResponse = (response: string) => {
+      if (response === '[DIALOG_FINISHED]') return;
       debugLogger.log(
         `[OmniDialogManager] Received RemoteDialogResponse: ${response}`,
       );
