@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GeminiChat } from './geminiChat';
-import { Config } from '../config/config';
-import { OmniLogger } from '../utils/omniLogger';
+import { GeminiChat } from './geminiChat.js';
+import { Config } from '../config/config.js';
+import { OmniLogger } from '../utils/omniLogger.js';
 
 vi.mock('../utils/omniLogger');
 vi.mock('../telemetry/loggers');
@@ -26,7 +26,7 @@ describe('GeminiChat Resilience Integration', () => {
     config = new Config({
       sessionId: 'test-session',
       targetDir: process.cwd(),
-    });
+    } as any);
     vi.spyOn(config, 'getContentGenerator').mockReturnValue(mockContentGenerator);
     chat = new GeminiChat(config);
   });

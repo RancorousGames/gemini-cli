@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { OmniLogger } from './omniLogger';
+import { OmniLogger } from './omniLogger.js';
 
 vi.mock('fs');
 

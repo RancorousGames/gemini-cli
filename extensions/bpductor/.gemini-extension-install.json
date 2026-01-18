@@ -1,0 +1,5 @@
+{
+  "source": "https://github.com/gemini-cli-extensions/bpductor",
+  "type": "github-release",
+  "releaseTag": "bpductor-v0.2.0"
+}

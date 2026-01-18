@@ -1,0 +1,9 @@
+description = "Modify an existing Blueprint via binary patching"
+prompt = '''
+The user wants to modify logic in a Blueprint: {{args}}.
+Following the BPductor protocol:
+1. Read the binary specification files in D:\Wartribes\Plugins\BPConductor\Documentation\.  
+2. Load the existing .uasset file to analyze its current Export Table and Bytecode.
+3. Plan the binary patch or rewrite.
+4. Use the 'write_file' tool to update the asset.
+'''

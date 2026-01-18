@@ -43,7 +43,7 @@ import {
 } from '../telemetry/types.js';
 import { handleFallback } from '../fallback/handler.js';
 import { isFunctionResponse } from '../utils/messageInspectors.js';
-import { getErrorMessage } from '../utils/errors.js';
+import { getErrorMessage, ResilienceError } from '../utils/errors.js';
 import { partListUnionToString } from './geminiRequest.js';
 import type { ModelConfigKey } from '../services/modelConfigService.js';
 import { estimateTokenCountSync } from '../utils/tokenCalculation.js';
@@ -425,9 +425,14 @@ export class GeminiChat {
           }
           throw lastError;
         }
-      } catch (error) {
+      } catch (error: any) {
         if (isMismatchedFunctionPartsError(error)) {
           this.history.pop();
+        } else if (error.status === 400 || error.code === 400) {
+          throw new ResilienceError(
+            getErrorMessage(error) || 'API 400 Error',
+            error,
+          );
         }
         throw error;
       } finally {

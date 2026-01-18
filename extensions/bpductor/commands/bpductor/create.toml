@@ -1,0 +1,8 @@
+description = "Create a new Blueprint asset via binary manipulation"
+prompt = '''
+The user wants to create a new Unreal Engine Blueprint called '{{args}}'.
+Following the BPductor protocol:
+1. Read the binary specification files in D:\Wartribes\Plugins\BPConductor\Documentation\.  
+2. Plan the binary structure (Header, NameTable, Imports, Exports).
+3. Use the 'write_file' tool to generate the .uasset binary data.
+'''

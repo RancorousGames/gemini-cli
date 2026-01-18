@@ -81,6 +81,16 @@ export class ForbiddenError extends Error {}
 export class UnauthorizedError extends Error {}
 export class BadRequestError extends Error {}
 
+export class ResilienceError extends Error {
+  constructor(
+    message: string,
+    readonly originalError: any,
+  ) {
+    super(message);
+    this.name = 'ResilienceError';
+  }
+}
+
 interface ResponseData {
   error?: {
     code?: number;
