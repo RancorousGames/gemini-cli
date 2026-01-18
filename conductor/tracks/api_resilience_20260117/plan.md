@@ -6,11 +6,11 @@
     - [x] Implement log rotation/organization (e.g., append to `Omni/api_errors.log` with timestamp).
     - [x] Ensure robust file I/O (synchronous write or queue) to guarantee capture before crash.
     - [x] Test `OmniLogger` with mock data.
-- [ ] Task: Integrate Logging into `GeminiChat.ts` error handling.
-    - [ ] Locate API request execution points in `GeminiChat.ts`.
-    - [ ] Implement `try-catch` blocks around API calls to capture 400/500 errors.
-    - [ ] Extract full request context (conversation history, tool results) and raw response headers/body.
-    - [ ] Call `OmniLogger` within the catch block before any error propagation.
+- [x] Task: Integrate Logging into `GeminiChat.ts` error handling. 9c9f4b5
+    - [x] Locate API request execution points in `GeminiChat.ts`.
+    - [x] Implement `try-catch` blocks around API calls to capture 400/500 errors.
+    - [x] Extract full request context (conversation history, tool results) and raw response headers/body.
+    - [x] Call `OmniLogger` within the catch block before any error propagation.
 - [ ] Task: Conductor - User Manual Verification 'High-Fidelity Logging System' (Protocol in workflow.md)
 
 ## Phase 2: Interactive Recovery Mechanism
