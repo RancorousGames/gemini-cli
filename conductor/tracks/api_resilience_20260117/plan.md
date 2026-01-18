@@ -27,10 +27,10 @@
 - [ ] Task: Conductor - User Manual Verification 'Interactive Recovery Mechanism' (Protocol in workflow.md)
 
 ## Phase 3: Final Verification & Observation
-- [ ] Task: End-to-End Simulation.
-    - [ ] Simulate a 400 error (e.g., by artificially corrupting a request).
-    - [ ] Verify log file content matches expectations (JSON snapshots, headers).
-    - [ ] Verify Recovery Menu appears and functions correctly (Rollback works).
-- [ ] Task: Observation Period (7 Days).
+- [x] Task: End-to-End Simulation. b60c2dc
+    - [x] Simulate a 400 error (e.g., by artificially corrupting a request).
+    - [x] Verify log file content matches expectations (JSON snapshots, headers).
+    - [x] Verify Recovery Menu appears and functions correctly (Rollback works).
+- [~] Task: Observation Period (7 Days).
     - [ ] Confirm stability over one week of usage.
 - [ ] Task: Conductor - User Manual Verification 'Final Verification & Observation' (Protocol in workflow.md)
