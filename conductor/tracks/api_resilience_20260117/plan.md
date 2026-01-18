@@ -17,10 +17,10 @@
 - [x] Task: Implement Recovery Options Logic in `GeminiChat.ts`. 200eb64
     - [x] Define recovery strategies: `Deep Rollback` (pop last user message + response), `Clear Turn` (reset current partial turn).
     - [x] Create functions to manipulate the `history` object safely for each strategy.
-- [ ] Task: Implement Interactive CLI Prompt.
-    - [ ] Use `prompts` or `ink` (depending on current CLI UI stack) to display the error and options.
-    - [ ] Present menu: "Deep Rollback", "Clear Current Turn", "Export Diagnostic Log".
-    - [ ] Wire user selection to the recovery strategies.
+- [x] Task: Implement Interactive CLI Prompt. 9f4d571
+    - [x] Use `prompts` or `ink` (depending on current CLI UI stack) to display the error and options.
+    - [x] Present menu: "Deep Rollback", "Clear Current Turn", "Export Diagnostic Log".
+    - [x] Wire user selection to the recovery strategies.
 - [ ] Task: Refine Error Detection.
     - [ ] Differentiate between transient network errors (retryable) and 400 Bad Request (requires intervention).
     - [ ] Only trigger Interactive Recovery for 400s or repeated 500s.
