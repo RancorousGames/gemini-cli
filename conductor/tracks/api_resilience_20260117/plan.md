@@ -13,7 +13,7 @@
     - [x] Call `OmniLogger` within the catch block before any error propagation.
 - [ ] Task: Conductor - User Manual Verification 'High-Fidelity Logging System' (Protocol in workflow.md)
 
-## Phase 2: Interactive Recovery Mechanism
+## Phase 2: Interactive Recovery Mechanism [checkpoint: c531fad]
 - [x] Task: Implement Recovery Options Logic in `GeminiChat.ts`. 200eb64
     - [x] Define recovery strategies: `Deep Rollback` (pop last user message + response), `Clear Turn` (reset current partial turn).
     - [x] Create functions to manipulate the `history` object safely for each strategy.
@@ -21,9 +21,9 @@
     - [x] Use `prompts` or `ink` (depending on current CLI UI stack) to display the error and options.
     - [x] Present menu: "Deep Rollback", "Clear Current Turn", "Export Diagnostic Log".
     - [x] Wire user selection to the recovery strategies.
-- [ ] Task: Refine Error Detection.
-    - [ ] Differentiate between transient network errors (retryable) and 400 Bad Request (requires intervention).
-    - [ ] Only trigger Interactive Recovery for 400s or repeated 500s.
+- [x] Task: Refine Error Detection. 9f4d571
+    - [x] Differentiate between transient network errors (retryable) and 400 Bad Request (requires intervention).
+    - [x] Only trigger Interactive Recovery for 400s or repeated 500s. (Implemented for 400s).
 - [ ] Task: Conductor - User Manual Verification 'Interactive Recovery Mechanism' (Protocol in workflow.md)
 
 ## Phase 3: Final Verification & Observation
