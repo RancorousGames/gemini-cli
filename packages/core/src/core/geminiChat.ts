@@ -666,6 +666,36 @@ export class GeminiChat {
   }
 
   /**
+   * Performs a deep rollback by removing the last user message and any subsequent
+   * parts from the history. This is used when a turn results in an unrecoverable error.
+   */
+  rollbackDeep(): void {
+    // Find the last user message
+    let lastUserIndex = -1;
+    for (let i = this.history.length - 1; i >= 0; i--) {
+      if (this.history[i].role === 'user') {
+        lastUserIndex = i;
+        break;
+      }
+    }
+
+    if (lastUserIndex !== -1) {
+      this.history.splice(lastUserIndex);
+    }
+  }
+
+  /**
+   * Clears the current turn by removing the very last entry from history.
+   * If the last entry is a user message that hasn't been responded to yet,
+   * this effectively resets the attempt for that message.
+   */
+  clearCurrentTurn(): void {
+    if (this.history.length > 0) {
+      this.history.pop();
+    }
+  }
+
+  /**
    * Clears the chat history.
    */
   clearHistory(): void {

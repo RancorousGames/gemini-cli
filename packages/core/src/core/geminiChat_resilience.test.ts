@@ -73,4 +73,33 @@ describe('GeminiChat Resilience Integration', () => {
 
     expect(OmniLogger.logError).toHaveBeenCalled();
   }, 15000);
+
+  describe('Recovery Strategies', () => {
+    it('should perform Deep Rollback correctly', () => {
+      chat.history = [
+        { role: 'user', parts: [{ text: 'msg 1' }] },
+        { role: 'model', parts: [{ text: 'resp 1' }] },
+        { role: 'user', parts: [{ text: 'msg 2' }] },
+      ];
+
+      chat.rollbackDeep();
+
+      expect(chat.history).toHaveLength(2);
+      expect(chat.history[0].parts[0].text).toBe('msg 1');
+      expect(chat.history[1].parts[0].text).toBe('resp 1');
+    });
+
+    it('should perform Clear Current Turn correctly', () => {
+      chat.history = [
+        { role: 'user', parts: [{ text: 'msg 1' }] },
+        { role: 'model', parts: [{ text: 'resp 1' }] },
+        { role: 'user', parts: [{ text: 'msg 2' }] },
+      ];
+
+      chat.clearCurrentTurn();
+
+      expect(chat.history).toHaveLength(2);
+      expect(chat.history[1].parts[0].text).toBe('resp 1');
+    });
+  });
 });
