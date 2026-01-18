@@ -14,9 +14,9 @@
 - [ ] Task: Conductor - User Manual Verification 'High-Fidelity Logging System' (Protocol in workflow.md)
 
 ## Phase 2: Interactive Recovery Mechanism
-- [ ] Task: Implement Recovery Options Logic in `GeminiChat.ts`.
-    - [ ] Define recovery strategies: `Deep Rollback` (pop last user message + response), `Clear Turn` (reset current partial turn).
-    - [ ] Create functions to manipulate the `history` object safely for each strategy.
+- [x] Task: Implement Recovery Options Logic in `GeminiChat.ts`. 200eb64
+    - [x] Define recovery strategies: `Deep Rollback` (pop last user message + response), `Clear Turn` (reset current partial turn).
+    - [x] Create functions to manipulate the `history` object safely for each strategy.
 - [ ] Task: Implement Interactive CLI Prompt.
     - [ ] Use `prompts` or `ink` (depending on current CLI UI stack) to display the error and options.
     - [ ] Present menu: "Deep Rollback", "Clear Current Turn", "Export Diagnostic Log".
