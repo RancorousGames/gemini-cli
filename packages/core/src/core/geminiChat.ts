@@ -36,6 +36,7 @@ import {
   ChatRecordingService,
   type ResumedSessionData,
 } from '../services/chatRecordingService.js';
+import { OmniLogger } from '../utils/omniLogger.js';
 import {
   ContentRetryEvent,
   ContentRetryFailureEvent,
@@ -585,14 +586,23 @@ export class GeminiChat {
       lastConfig = config;
       lastContentsToUse = contentsToUse;
 
-      return this.config.getContentGenerator().generateContentStream(
-        {
-          model: modelToUse,
-          contents: contentsToUse,
-          config,
-        },
-        prompt_id,
-      );
+      try {
+        return await this.config.getContentGenerator().generateContentStream(
+          {
+            model: modelToUse,
+            contents: contentsToUse,
+            config,
+          },
+          prompt_id,
+        );
+      } catch (error: any) {
+        const status = error.status || error.code || error.response?.status;
+        if (status >= 400) {
+          OmniLogger.logError(error, 'GeminiChat.apiCall');
+          OmniLogger.log('Conversation History Snapshot', this.history);
+        }
+        throw error;
+      }
     };
 
     const onPersistent429Callback = async (
