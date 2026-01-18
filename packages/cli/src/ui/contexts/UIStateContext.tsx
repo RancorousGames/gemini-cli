@@ -12,6 +12,7 @@ import type {
   ShellConfirmationRequest,
   ConfirmationRequest,
   LoopDetectionConfirmationRequest,
+  ResilienceRecoveryRequest,
   HistoryItemWithoutId,
   StreamingState,
   ActiveHook,
@@ -74,6 +75,7 @@ export interface UIState {
   confirmationRequest: ConfirmationRequest | null;
   confirmUpdateExtensionRequests: ConfirmationRequest[];
   loopDetectionConfirmationRequest: LoopDetectionConfirmationRequest | null;
+  resilienceRecoveryRequest: ResilienceRecoveryRequest | null;
   geminiMdFileCount: number;
   streamingState: StreamingState;
   initError: string | null;

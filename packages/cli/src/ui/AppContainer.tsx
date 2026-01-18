@@ -828,6 +828,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
     handleApprovalModeChange,
     activePtyId,
     loopDetectionConfirmationRequest,
+    resilienceRecoveryRequest,
     lastOutputTime,
   } = useGeminiStream(
     config.getGeminiClient(),
@@ -1605,6 +1606,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
       confirmationRequest,
       confirmUpdateExtensionRequests,
       loopDetectionConfirmationRequest,
+      resilienceRecoveryRequest,
       geminiMdFileCount,
       streamingState,
       initError,
@@ -1698,6 +1700,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
       confirmationRequest,
       confirmUpdateExtensionRequests,
       loopDetectionConfirmationRequest,
+      resilienceRecoveryRequest,
       geminiMdFileCount,
       streamingState,
       initError,

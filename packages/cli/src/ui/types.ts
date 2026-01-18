@@ -432,6 +432,13 @@ export interface LoopDetectionConfirmationRequest {
   onComplete: (result: { userSelection: 'disable' | 'keep' }) => void;
 }
 
+export interface ResilienceRecoveryRequest {
+  error: any;
+  onComplete: (result: {
+    action: 'deep_rollback' | 'clear_turn' | 'ignore';
+  }) => void;
+}
+
 export interface ActiveHook {
   name: string;
   eventName: string;

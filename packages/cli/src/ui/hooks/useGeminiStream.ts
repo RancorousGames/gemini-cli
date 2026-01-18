@@ -40,6 +40,7 @@ import {
   processRestorableToolCalls,
   recordToolCallInteractions,
   ToolErrorType,
+  ResilienceError,
 } from '@google/gemini-cli-core';
 import { type Part, type PartListUnion, FinishReason } from '@google/genai';
 import type {
@@ -227,6 +228,13 @@ export const useGeminiStream = (
     setLoopDetectionConfirmationRequest,
   ] = useState<{
     onComplete: (result: { userSelection: 'disable' | 'keep' }) => void;
+  } | null>(null);
+
+  const [resilienceRecoveryRequest, setResilienceRecoveryRequest] = useState<{
+    error: ResilienceError;
+    onComplete: (result: {
+      action: 'deep_rollback' | 'clear_turn' | 'ignore';
+    }) => void;
   } | null>(null);
 
   const onExec = useCallback(async (done: Promise<void>) => {
@@ -1098,6 +1106,52 @@ export const useGeminiStream = (
               spanMetadata.error = error;
               if (error instanceof UnauthorizedError) {
                 onAuthError('Session expired or is unauthorized.');
+              } else if (error instanceof ResilienceError) {
+                setResilienceRecoveryRequest({
+                  error,
+                  onComplete: (result) => {
+                    setResilienceRecoveryRequest(null);
+                    if (result.action === 'deep_rollback') {
+                      config.getGeminiClient().getChat().rollbackDeep();
+                      addItem(
+                        {
+                          type: MessageType.INFO,
+                          text: 'Deep rollback performed. Returning to previous state.',
+                        },
+                        Date.now(),
+                      );
+                    } else if (result.action === 'clear_turn') {
+                      config.getGeminiClient().getChat().clearCurrentTurn();
+                      addItem(
+                        {
+                          type: MessageType.INFO,
+                          text: 'Current turn cleared.',
+                        },
+                        Date.now(),
+                      );
+                    }
+
+                    if (
+                      result.action !== 'ignore' &&
+                      lastQueryRef.current &&
+                      lastPromptIdRef.current
+                    ) {
+                      addItem(
+                        {
+                          type: MessageType.INFO,
+                          text: 'Retrying request...',
+                        },
+                        Date.now(),
+                      );
+                      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                      submitQuery(
+                        lastQueryRef.current,
+                        { isContinuation: true },
+                        lastPromptIdRef.current,
+                      );
+                    }
+                  },
+                });
               } else if (!isNodeError(error) || error.name !== 'AbortError') {
                 addItem(
                   {
@@ -1413,6 +1467,7 @@ export const useGeminiStream = (
     handleApprovalModeChange,
     activePtyId,
     loopDetectionConfirmationRequest,
+    resilienceRecoveryRequest,
     lastOutputTime,
   };
 };

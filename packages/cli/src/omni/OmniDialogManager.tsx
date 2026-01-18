@@ -17,6 +17,7 @@ import {
 } from '@google/gemini-cli-core';
 import { ToolCallStatus } from '../ui/types.js';
 import { FolderTrustChoice } from '../ui/components/FolderTrustDialog.js';
+import { ResilienceRecoveryDialog } from '../ui/components/ResilienceRecoveryDialog.js';
 import { ConfigContext } from '../ui/contexts/ConfigContext.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -179,6 +180,11 @@ export const OmniDialogManager = () => {
           uiActions.onAuthError('Authentication cancelled.');
           appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
         }
+      } else if (type === 'resilience_recovery' && uiState.resilienceRecoveryRequest) {
+        uiState.resilienceRecoveryRequest.onComplete({
+          action: response as 'deep_rollback' | 'clear_turn' | 'ignore',
+        });
+        appEvents.emit(AppEvent.RemoteDialogResponse, '[DIALOG_FINISHED]');
       }
     },
     [uiState, uiActions, config],
@@ -238,14 +244,19 @@ export const OmniDialogManager = () => {
         );
       }
     } else if (uiState.loopDetectionConfirmationRequest) {
-      currentDialog = {
-        type: 'loop_detection',
-        prompt:
-          'Repetitive tool calls detected. Do you want to keep loop detection enabled or disable it?',
-        options: ['keep', 'disable'],
-      };
-    } else if (uiState.confirmationRequest) {
-      currentDialog = {
+              currentDialog = {
+                type: 'loop_detection',
+                prompt:
+                  'Repetitive tool calls detected. Do you want to keep loop detection enabled or disable it?',
+                options: ['keep', 'disable'],
+              };
+            } else if (uiState.resilienceRecoveryRequest) {
+              currentDialog = {
+                type: 'resilience_recovery',
+                prompt: uiState.resilienceRecoveryRequest.error.message || 'API Error',
+                options: ['deep_rollback', 'clear_turn', 'ignore'],
+              };
+            } else if (uiState.confirmationRequest) {      currentDialog = {
         type: 'confirmation',
         prompt: extractText(uiState.confirmationRequest.prompt),
         options: ['yes', 'no'],
@@ -510,6 +521,12 @@ export const OmniDialogManager = () => {
       appEvents.off(AppEvent.RemoteDialogResponse, onRemoteResponse);
     };
   }, []);
+
+  if (uiState.resilienceRecoveryRequest) {
+    return (
+      <ResilienceRecoveryDialog request={uiState.resilienceRecoveryRequest} />
+    );
+  }
 
   return null;
 };
