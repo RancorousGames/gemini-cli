@@ -31,6 +31,7 @@ import { useSettings } from '../contexts/SettingsContext.js';
 import process from 'node:process';
 import { type UseHistoryManagerReturn } from '../hooks/useHistoryManager.js';
 import { IdeTrustChangeDialog } from './IdeTrustChangeDialog.js';
+import { ResilienceRecoveryDialog } from './ResilienceRecoveryDialog.js';
 
 interface DialogManagerProps {
   addItem: UseHistoryManagerReturn['addItem'];
@@ -91,6 +92,11 @@ export const DialogManager = ({
       <LoopDetectionConfirmation
         onComplete={uiState.loopDetectionConfirmationRequest.onComplete}
       />
+    );
+  }
+  if (uiState.resilienceRecoveryRequest) {
+    return (
+      <ResilienceRecoveryDialog request={uiState.resilienceRecoveryRequest} />
     );
   }
   if (uiState.confirmationRequest) {

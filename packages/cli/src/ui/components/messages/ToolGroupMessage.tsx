@@ -16,6 +16,7 @@ import { theme } from '../../semantic-colors.js';
 import { SHELL_COMMAND_NAME, SHELL_NAME } from '../../constants.js';
 import { SHELL_TOOL_NAME } from '@google/gemini-cli-core';
 import { useConfig } from '../../contexts/ConfigContext.js';
+import { getRevertedColor, getRevertedBorderColor } from '../../../omni/undoStyles.js';
 
 interface ToolGroupMessageProps {
   groupId: number;
@@ -26,6 +27,7 @@ interface ToolGroupMessageProps {
   activeShellPtyId?: number | null;
   embeddedShellFocused?: boolean;
   onShellInputSubmit?: (input: string) => void;
+  reverted?: boolean;
 }
 
 // Main component renders the border and maps the tools using ToolMessage
@@ -36,6 +38,7 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   isFocused = true,
   activeShellPtyId,
   embeddedShellFocused,
+  reverted,
 }) => {
   const isEmbeddedShellFocused =
     embeddedShellFocused &&
@@ -52,15 +55,16 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
   const isShellCommand = toolCalls.some(
     (t) => t.name === SHELL_COMMAND_NAME || t.name === SHELL_NAME,
   );
-  const borderColor =
-    (isShellCommand && hasPending) || isEmbeddedShellFocused
+  const borderColor = reverted
+    ? getRevertedBorderColor()
+    : (isShellCommand && hasPending) || isEmbeddedShellFocused
       ? theme.ui.symbol
       : hasPending
         ? theme.status.warning
         : theme.border.default;
 
   const borderDimColor =
-    hasPending && (!isShellCommand || !isEmbeddedShellFocused);
+    !reverted && hasPending && (!isShellCommand || !isEmbeddedShellFocused);
 
   const staticHeight = /* border */ 2 + /* marginBottom */ 1;
 
@@ -102,6 +106,13 @@ export const ToolGroupMessage: React.FC<ToolGroupMessageProps> = ({
       */
       width={terminalWidth}
     >
+      {reverted && (
+        <Box paddingLeft={1}>
+          <Text color={getRevertedColor()} bold italic>
+            [ REVERTED ]
+          </Text>
+        </Box>
+      )}
       {toolCalls.map((tool, index) => {
         const isConfirming = toolAwaitingApproval?.callId === tool.callId;
         const isFirst = index === 0;

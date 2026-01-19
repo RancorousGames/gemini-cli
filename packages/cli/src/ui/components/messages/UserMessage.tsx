@@ -9,18 +9,20 @@ import { Text, Box } from 'ink';
 import { theme } from '../../semantic-colors.js';
 import { SCREEN_READER_USER_PREFIX } from '../../textConstants.js';
 import { isSlashCommand as checkIsSlashCommand } from '../../utils/commandUtils.js';
+import { getRevertedColor } from '../../../omni/undoStyles.js';
 
 interface UserMessageProps {
   text: string;
   width: number;
+  reverted?: boolean;
 }
 
-export const UserMessage: React.FC<UserMessageProps> = ({ text, width }) => {
+export const UserMessage: React.FC<UserMessageProps> = ({ text, width, reverted }) => {
   const prefix = '> ';
   const prefixWidth = prefix.length;
   const isSlashCommand = checkIsSlashCommand(text);
 
-  const textColor = isSlashCommand ? theme.text.accent : theme.text.secondary;
+  const textColor = reverted ? getRevertedColor() : (isSlashCommand ? theme.text.accent : theme.text.secondary);
 
   return (
     <Box
@@ -31,13 +33,13 @@ export const UserMessage: React.FC<UserMessageProps> = ({ text, width }) => {
       width={width}
     >
       <Box width={prefixWidth} flexShrink={0}>
-        <Text color={theme.text.accent} aria-label={SCREEN_READER_USER_PREFIX}>
+        <Text color={reverted ? getRevertedColor() : theme.text.accent} aria-label={SCREEN_READER_USER_PREFIX}>
           {prefix}
         </Text>
       </Box>
       <Box flexGrow={1}>
-        <Text wrap="wrap" color={textColor}>
-          {text}
+        <Text wrap="wrap" color={textColor} strikethrough={reverted} dimColor={reverted}>
+          {reverted && '[ REVERTED ] '}{text}
         </Text>
       </Box>
     </Box>

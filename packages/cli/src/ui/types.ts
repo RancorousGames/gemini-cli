@@ -91,6 +91,7 @@ export const emptyIcon = '  ';
 
 export interface HistoryItemBase {
   text?: string; // Text content for user/gemini/info/error messages
+  reverted?: boolean;
 }
 
 export type HistoryItemUser = HistoryItemBase & {

@@ -8,6 +8,8 @@ D:\SSDProjects\Omni Always read
 D:\SSDProjects\Tools\gemini-cli\Omni\OmniCustomChanges.md before making changes
 and keep it updated after.
 
+Run build.py after making changes.
+
 # GEMINI-CLI
 
 ## Git Repo

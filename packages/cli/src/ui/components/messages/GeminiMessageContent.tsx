@@ -5,16 +5,18 @@
  */
 
 import type React from 'react';
-import { Box } from 'ink';
+import { Box, Text } from 'ink';
 import { MarkdownDisplay } from '../../utils/MarkdownDisplay.js';
 import { useUIState } from '../../contexts/UIStateContext.js';
 import { useAlternateBuffer } from '../../hooks/useAlternateBuffer.js';
+import { getRevertedColor } from '../../../omni/undoStyles.js';
 
 interface GeminiMessageContentProps {
   text: string;
   isPending: boolean;
   availableTerminalHeight?: number;
   terminalWidth: number;
+  reverted?: boolean;
 }
 
 /*
@@ -28,6 +30,7 @@ export const GeminiMessageContent: React.FC<GeminiMessageContentProps> = ({
   isPending,
   availableTerminalHeight,
   terminalWidth,
+  reverted,
 }) => {
   const { renderMarkdown } = useUIState();
   const isAlternateBuffer = useAlternateBuffer();
@@ -36,15 +39,21 @@ export const GeminiMessageContent: React.FC<GeminiMessageContentProps> = ({
 
   return (
     <Box flexDirection="column" paddingLeft={prefixWidth}>
-      <MarkdownDisplay
-        text={text}
-        isPending={isPending}
-        availableTerminalHeight={
-          isAlternateBuffer ? undefined : availableTerminalHeight
-        }
-        terminalWidth={terminalWidth}
-        renderMarkdown={renderMarkdown}
-      />
+      {reverted ? (
+        <Text color={getRevertedColor()} strikethrough dimColor>
+          [ REVERTED ] {text}
+        </Text>
+      ) : (
+        <MarkdownDisplay
+          text={text}
+          isPending={isPending}
+          availableTerminalHeight={
+            isAlternateBuffer ? undefined : availableTerminalHeight
+          }
+          terminalWidth={terminalWidth}
+          renderMarkdown={renderMarkdown}
+        />
+      )}
     </Box>
   );
 };

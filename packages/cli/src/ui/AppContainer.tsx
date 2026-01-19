@@ -417,6 +417,8 @@ export const AppContainer = (props: AppContainerProps) => {
   const refreshStatic = useCallback(() => {
     if (!isAlternateBuffer) {
       stdout.write(ansiEscapes.clearTerminal);
+      stdout.write(ansiEscapes.eraseScreen);
+      stdout.write(ansiEscapes.cursorTo(0, 0));
     }
     setHistoryRemountKey((prev) => prev + 1);
   }, [setHistoryRemountKey, isAlternateBuffer, stdout]);
@@ -716,6 +718,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
     settings,
     historyManager.addItem,
     historyManager.clearItems,
+    historyManager.undo,
     historyManager.loadHistory,
     refreshStatic,
     toggleVimEnabled,
@@ -1510,6 +1513,7 @@ Logging in with Google... Restarting Gemini CLI to continue.
     !!customDialog ||
     confirmUpdateExtensionRequests.length > 0 ||
     !!loopDetectionConfirmationRequest ||
+    !!resilienceRecoveryRequest ||
     isThemeDialogOpen ||
     isSettingsDialogOpen ||
     isModelDialogOpen ||
@@ -1523,6 +1527,16 @@ Logging in with Google... Restarting Gemini CLI to continue.
     isSessionBrowserOpen ||
     isAuthDialogOpen ||
     authState === AuthState.AwaitingApiKeyInput;
+
+  if (resilienceRecoveryRequest) {
+    debugLogger.log(`[DEBUG] AppContainer: resilienceRecoveryRequest is ACTIVE. dialogsVisible: ${dialogsVisible}`);
+  }
+
+  useEffect(() => {
+    if (resilienceRecoveryRequest) {
+      debugLogger.log('[DEBUG] AppContainer: resilienceRecoveryRequest effect triggered');
+    }
+  }, [resilienceRecoveryRequest]);
 
   const pendingHistoryItems = useMemo(
     () => [...pendingSlashCommandHistoryItems, ...pendingGeminiHistoryItems],

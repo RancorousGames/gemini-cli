@@ -17,7 +17,6 @@ import {
 } from '@google/gemini-cli-core';
 import { ToolCallStatus } from '../ui/types.js';
 import { FolderTrustChoice } from '../ui/components/FolderTrustDialog.js';
-import { ResilienceRecoveryDialog } from '../ui/components/ResilienceRecoveryDialog.js';
 import { ConfigContext } from '../ui/contexts/ConfigContext.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -394,6 +393,7 @@ export const OmniDialogManager = () => {
     uiState.confirmUpdateExtensionRequests,
     uiState.shellConfirmationRequest,
     uiState.loopDetectionConfirmationRequest,
+    uiState.resilienceRecoveryRequest,
     uiState.proQuotaRequest,
     uiState.isFolderTrustDialogOpen,
     uiState.shouldShowIdePrompt,
@@ -522,11 +522,12 @@ export const OmniDialogManager = () => {
     };
   }, []);
 
-  if (uiState.resilienceRecoveryRequest) {
-    return (
-      <ResilienceRecoveryDialog request={uiState.resilienceRecoveryRequest} />
-    );
-  }
+    if (uiState.resilienceRecoveryRequest) {
+      // Side effects for logging are already handled in the main useEffect above
+      // We don't need to return the component here as DialogManager will render it in the main UI
+      // but we keep the logging for now to help verify triggers in the debug drawer.
+      debugLogger.log('[DEBUG] OmniDialogManager: detected resilienceRecoveryRequest (Rendering handled by DialogManager)');
+    }
 
-  return null;
+    return null;
 };

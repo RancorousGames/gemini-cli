@@ -426,14 +426,37 @@ export class GeminiChat {
           throw lastError;
         }
       } catch (error: any) {
-        if (isMismatchedFunctionPartsError(error)) {
-          this.history.pop();
-        } else if (error.status === 400 || error.code === 400) {
+        console.error('!!! GeminiChat.sendMessageStream CATCH BLOCK HIT !!!');
+        console.error('Error Object Keys:', Object.keys(error));
+        console.error('Error Message:', error.message);
+        console.error('Error Status (direct):', error.status);
+        console.error('Error Code (direct):', error.code);
+        console.error('Error Response Status:', error.response?.status);
+        
+        const status = error.status || error.code || error.response?.status;
+        const isMismatched = isMismatchedFunctionPartsError(error);
+        
+        console.error('Resolved Status:', status);
+        console.error('Is Mismatched Function Parts:', isMismatched);
+
+        if (status === 400 || isMismatched) {
+          console.error('Triggering OmniLogger and ResilienceError...');
+          try {
+            OmniLogger.logError(error, isMismatched ? 'GeminiChat.sendMessageStream.mismatched' : 'GeminiChat.sendMessageStream.400');
+            // Only log the last 5 turns to keep the log size manageable
+            const truncatedHistory = this.history.slice(-5);
+            OmniLogger.log('Conversation History Snapshot (Last 5 turns)', truncatedHistory);
+            console.error('OmniLogger calls completed.');
+          } catch (logError) {
+            console.error('OmniLogger CRASHED:', logError);
+          }
+          
           throw new ResilienceError(
-            getErrorMessage(error) || 'API 400 Error',
+            getErrorMessage(error) || (isMismatched ? 'Mismatched Function Parts' : 'API 400 Error'),
             error,
           );
         }
+        console.error('Propagating original error (not a 400/mismatched)...');
         throw error;
       } finally {
         streamDoneResolver!();
@@ -602,9 +625,15 @@ export class GeminiChat {
         );
       } catch (error: any) {
         const status = error.status || error.code || error.response?.status;
-        if (status >= 400) {
-          OmniLogger.logError(error, 'GeminiChat.apiCall');
-          OmniLogger.log('Conversation History Snapshot', this.history);
+        if (status === 400) {
+          try {
+            OmniLogger.logError(error, 'GeminiChat.apiCall');
+            // Only log the last 5 turns to keep the log size manageable
+            const truncatedHistory = this.history.slice(-5);
+            OmniLogger.log('Conversation History Snapshot (Last 5 turns)', truncatedHistory);
+          } catch (logError) {
+            console.error('OmniLogger failed in apiCall:', logError);
+          }
         }
         throw error;
       }
@@ -687,6 +716,13 @@ export class GeminiChat {
     if (lastUserIndex !== -1) {
       this.history.splice(lastUserIndex);
     }
+  }
+
+  /**
+   * Removes the entire last turn from the history (User message + Model response).
+   */
+  rollbackTurn(): void {
+    this.rollbackDeep();
   }
 
   /**
@@ -1027,8 +1063,10 @@ export function isInvalidArgumentError(errorMessage: string): boolean {
 }
 
 export function isMismatchedFunctionPartsError(error: unknown): boolean {
-  const message = getErrorMessage(error);
-  return message.includes(
-    'number of function response parts is equal to the number of function call parts',
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes('mismatched function parts') ||
+    message.includes('number of function response parts') ||
+    message.includes('function call parts')
   );
 }

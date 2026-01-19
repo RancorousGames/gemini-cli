@@ -16,6 +16,7 @@ export function createNonInteractiveUI(): CommandContext['ui'] {
   return {
     addItem: (_item, _timestamp) => 0,
     clear: () => {},
+    undo: () => {},
     setDebugMessage: (_message) => {},
     loadHistory: (_newHistory) => {},
     pendingItem: null,

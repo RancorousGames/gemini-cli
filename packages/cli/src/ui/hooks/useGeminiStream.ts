@@ -1102,14 +1102,20 @@ export const useGeminiStream = (
                   },
                 });
               }
-            } catch (error: unknown) {
+            } catch (error: any) {
               spanMetadata.error = error;
+              debugLogger.log(`[DEBUG] useGeminiStream: caught error: ${error?.name} - ${error?.message}`);
+              
+              const isResilienceError = error instanceof ResilienceError || error?.name === 'ResilienceError' || error?.constructor?.name === 'ResilienceError';
+
               if (error instanceof UnauthorizedError) {
                 onAuthError('Session expired or is unauthorized.');
-              } else if (error instanceof ResilienceError) {
+              } else if (isResilienceError) {
+                debugLogger.log('[DEBUG] useGeminiStream: detected ResilienceError, setting state');
                 setResilienceRecoveryRequest({
                   error,
                   onComplete: (result) => {
+                    debugLogger.log(`[DEBUG] useGeminiStream: ResilienceRecoveryDialog onComplete with action: ${result.action}`);
                     setResilienceRecoveryRequest(null);
                     if (result.action === 'deep_rollback') {
                       config.getGeminiClient().getChat().rollbackDeep();

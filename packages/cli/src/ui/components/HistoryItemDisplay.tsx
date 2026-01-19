@@ -64,7 +64,11 @@ export const HistoryItemDisplay: React.FC<HistoryItemDisplayProps> = ({
     <Box flexDirection="column" key={itemForDisplay.id} width={terminalWidth}>
       {/* Render standard message types */}
       {itemForDisplay.type === 'user' && (
-        <UserMessage text={itemForDisplay.text} width={terminalWidth} />
+        <UserMessage
+          text={itemForDisplay.text}
+          width={terminalWidth}
+          reverted={itemForDisplay.reverted}
+        />
       )}
       {itemForDisplay.type === 'user_shell' && (
         <UserShellMessage text={itemForDisplay.text} />
@@ -77,6 +81,7 @@ export const HistoryItemDisplay: React.FC<HistoryItemDisplayProps> = ({
             availableTerminalHeightGemini ?? availableTerminalHeight
           }
           terminalWidth={terminalWidth}
+          reverted={itemForDisplay.reverted}
         />
       )}
       {itemForDisplay.type === 'gemini_content' && (
@@ -87,6 +92,7 @@ export const HistoryItemDisplay: React.FC<HistoryItemDisplayProps> = ({
             availableTerminalHeightGemini ?? availableTerminalHeight
           }
           terminalWidth={terminalWidth}
+          reverted={itemForDisplay.reverted}
         />
       )}
       {itemForDisplay.type === 'info' && (
@@ -140,6 +146,7 @@ export const HistoryItemDisplay: React.FC<HistoryItemDisplayProps> = ({
           isFocused={isFocused}
           activeShellPtyId={activeShellPtyId}
           embeddedShellFocused={embeddedShellFocused}
+          reverted={itemForDisplay.reverted}
         />
       )}
       {itemForDisplay.type === 'compression' && (

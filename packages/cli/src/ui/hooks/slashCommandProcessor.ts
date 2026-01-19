@@ -81,6 +81,7 @@ export const useSlashCommandProcessor = (
   settings: LoadedSettings,
   addItem: UseHistoryManagerReturn['addItem'],
   clearItems: UseHistoryManagerReturn['clearItems'],
+  undo: UseHistoryManagerReturn['undo'],
   loadHistory: UseHistoryManagerReturn['loadHistory'],
   refreshStatic: () => void,
   toggleVimEnabled: () => Promise<boolean>,
@@ -212,6 +213,10 @@ export const useSlashCommandProcessor = (
           clearItems();
           refreshStatic();
           setBannerVisible(false);
+        },
+        undo: () => {
+          undo();
+          refreshStatic();
         },
         loadHistory,
         setDebugMessage: actions.setDebugMessage,

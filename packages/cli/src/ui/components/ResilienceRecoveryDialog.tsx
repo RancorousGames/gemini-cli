@@ -14,6 +14,7 @@ interface Props {
 }
 
 export const ResilienceRecoveryDialog: React.FC<Props> = ({ request }) => {
+  console.error('!!! ResilienceRecoveryDialog COMPONENT RENDERING !!!');
   const options = [
     { label: 'Deep Rollback (Recommended)', value: 'deep_rollback', key: '1' },
     { label: 'Clear Current Turn', value: 'clear_turn', key: '2' },

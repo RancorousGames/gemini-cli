@@ -66,6 +66,7 @@ describe('useIncludeDirsTrust', () => {
       history: [],
       updateItem: vi.fn(),
       clearItems: vi.fn(),
+      undo: vi.fn(),
       loadHistory: vi.fn(),
     };
     mockSetCustomDialog = vi.fn();

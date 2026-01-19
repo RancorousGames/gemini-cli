@@ -15,6 +15,7 @@ import {
   SYNTHETIC_THOUGHT_SIGNATURE,
   type StreamEvent,
 } from './geminiChat.js';
+import { ResilienceError } from '../utils/errors.js';
 import type { Config } from '../config/config.js';
 import { setSimulate429 } from '../utils/testUtils.js';
 import { DEFAULT_THINKING_MODE } from '../config/models.js';
@@ -1339,7 +1340,7 @@ describe('GeminiChat', () => {
               /* consume stream */
             }
           })(),
-        ).rejects.toThrow(error400);
+        ).rejects.toThrow(ResilienceError);
 
         // Should only be called once (no retry)
         expect(
@@ -1521,7 +1522,9 @@ describe('GeminiChat', () => {
               /* consume stream */
             }
           })(),
-        ).rejects.toThrow(mismatchError);
+        ).rejects.toThrow(ResilienceError);
+
+        chat.rollbackTurn();
 
         // History should be back to initial state (the failed turn should be popped)
         expect(chat.getHistory().length).toBe(initialHistoryLength);

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export class OmniLogger {
-  private static logPath = path.join(process.cwd(), 'Omni', 'api_errors.log');
+  private static logPath = path.join('D:', 'SSDProjects', 'Tools', 'gemini-cli', 'Omni', 'api_errors.log');
   private static MAX_LOG_SIZE = 10 * 1024 * 1024; // 10MB
 
   private static ensureDirectoryExists() {
@@ -34,6 +34,7 @@ export class OmniLogger {
   }
 
   static log(message: string, data?: any) {
+    console.error(`OmniLogger.log: ${message}`);
     this.ensureDirectoryExists();
     this.rotateLogsIfNeeded();
 
@@ -45,13 +46,16 @@ export class OmniLogger {
     logMessage += '-------------------------------------------\n';
 
     try {
+      console.error(`OmniLogger: Appending to ${this.logPath}`);
       fs.appendFileSync(this.logPath, logMessage);
+      console.error('OmniLogger: Successfully wrote log.');
     } catch (err) {
       console.error('Failed to write to Omni log:', err);
     }
   }
 
   static logError(error: any, context?: string) {
+    console.error(`OmniLogger.logError: ${context}`);
     this.ensureDirectoryExists();
     this.rotateLogsIfNeeded();
 
@@ -67,7 +71,9 @@ export class OmniLogger {
     logMessage += '-------------------------------------------\n';
 
     try {
+      console.error(`OmniLogger: Appending error to ${this.logPath}`);
       fs.appendFileSync(this.logPath, logMessage);
+      console.error('OmniLogger: Successfully wrote error log.');
     } catch (err) {
       console.error('Failed to write to Omni log error:', err);
     }

@@ -123,8 +123,10 @@ of the refactor. Because we chose to modernize the CLI's foundation (Async/Await
 - **`packages/cli/src/omni/WorkspaceService.ts`**: Implements centralized
   workspace root management and detection.
 - **`packages/cli/src/omni/openDirectoryCommand.ts`**: Implements the `/od`
-  command to open the workspace root in the default file manager.-
-  **`packages/cli/src/omni/remoteControl.ts`**: The core IPC server
+  command to open the workspace root in the default file manager.
+- **`packages/cli/src/omni/undoCommand.ts`**: Implements the `/undo` command to
+  revert the chat history by one turn.
+- **`packages/cli/src/omni/remoteControl.ts`**: The core IPC server
   implementation using Node.js Named Pipes.
 - **`Omni/OmniCustomChanges.md`**: This documentation.
 - **`Omni/refactor_plan.md`**: Tracking the refactor progress and architectural
@@ -214,13 +216,16 @@ of the refactor. Because we chose to modernize the CLI's foundation (Async/Await
   - Added `[DIALOG_FINISHED]` marker emission when a dialog is closed.
   - Improved remote response handling with `handleAutoResponseRef` to prevent
     stale closures.
+  - Delegated `ResilienceRecoveryDialog` rendering to `DialogManager` while maintaining logging and Hub notification.
 - **`packages/cli/src/ui/hooks/useGeminiStream.ts`**:
   - Streams AI "thoughts" (reasoning) to the `RemoteThought` event.
   - Forwards raw tool call requests to the IPC layer for real-time progress
     tracking.
+  - Triggers `setResilienceRecoveryRequest` upon detecting unrecoverable API errors.
 - **`packages/cli/src/ui/hooks/useHistoryManager.ts`**:
   - Automatically forwards all history updates (AI, User, and System messages)
     to the remote listeners.
+  - Added `undo()` method to support manual turn-based history rollback.
 - **`packages/cli/src/ui/hooks/useReactToolScheduler.ts`**:
   - Intercepts completed tool results.
   - Specialized detection for code diffs, emitting them via `RemoteCodeDiff`.
@@ -253,3 +258,75 @@ To address a persistent issue where the Gemini API returns a 400 `INVALID_ARGUME
   1. The specific 400 error is caught.
   2. The history length decreases by one (rolling back the failed turn).
   3. The error is still re-thrown to inform the caller (so the UI can show the error), but the internal state is clean for the next attempt.
+
+## API Resilience & High-Fidelity Logging (Jan 2026 Update)
+
+### 1. Manual History Management (Undo)
+- **Command:** `/undo`
+- **Purpose:** Allows users to manually revert the chat history by one full turn (last User prompt + all subsequent AI responses/tool calls).
+- **Implementation:**
+    - UI side: `useHistoryManager.undo()` slices the history array.
+    - Model side: `GeminiChat.rollbackDeep()` pops the last user turn from the core history.
+    - Synchronizes the state to ensure the next prompt doesn't carry "poisoned" context.
+
+### 2. OmniLogger (`packages/core/src/utils/omniLogger.ts`)
+- **Purpose**: Provides high-fidelity logging for 400/500 API errors to `Omni/api_errors.log`.
+- **Implementation**: Captures full JSON conversation snapshots, raw response bodies, and error stacks.
+- **Recent Improvements**:
+    - Standardized to use absolute paths for the log file to ensure consistency across different working directories.
+    - Added extensive console logging within the logger itself to verify file I/O operations.
+    - Wrapped logging calls in `try-catch` blocks within the core logic to prevent logging failures from crashing the main execution loop.
+
+### 2. Resilience Recovery System (`packages/core/src/core/geminiChat.ts` and `packages/cli/src/ui/hooks/useGeminiStream.ts`)
+- **Error Identification**: Broadened `isMismatchedFunctionPartsError` to catch more variations of the "mismatched function parts" error (e.g., case-insensitive checks and partial string matches).
+- **Recovery Dialog**: 
+    - **Bug Fix (Jan 2026):** Discovered that `resilienceRecoveryRequest` was missing from the `dialogsVisible` calculation in `AppContainer.tsx`. This prevented the dialog area from rendering even when a recovery request was active. Added `!!resilienceRecoveryRequest` to the `dialogsVisible` constant.
+    - **Robust Error Checking:** Discovered that `instanceof ResilienceError` can be unreliable across package/bundle boundaries. Implemented a more robust error type check in `useGeminiStream.ts` that checks `error.name` and `error.constructor.name` in addition to `instanceof`.
+
+#### Detailed Execution Flow & Callstack (Recovery Path)
+1.  **`GeminiChat.sendMessageStream`** (`packages/core/src/core/geminiChat.ts`):
+    -   API call fails with 400.
+    -   `catch (error)` block resolves `status` (checking `error.status`, `code`, and `response?.status`).
+    -   `isMismatchedFunctionPartsError(error)` returns `true`.
+    -   `OmniLogger.logError` and `OmniLogger.log` (history snapshot) are called.
+    -   `throw new ResilienceError(...)` is executed.
+2.  **`useGeminiStream.ts`** (`packages/cli/src/ui/hooks/useGeminiStream.ts`):
+    -   The `submitQuery` function's internal `try-catch` block surrounding `sendMessageStream` catches the error.
+    -   Error is identified via `isResilienceError` (robust name-based check).
+    -   `setResilienceRecoveryRequest({ error, onComplete })` is called, updating the local state.
+3.  **`AppContainer.tsx`** (`packages/cli/src/ui/AppContainer.tsx`):
+    -   React triggers a re-render. `resilienceRecoveryRequest` is now non-null.
+    -   **Critical Path:** `dialogsVisible` is recalculated. It now correctly evaluates to `true` because of `!!resilienceRecoveryRequest`.
+    -   The `uiState` memo updates, carrying the request object to the `UIStateProvider`.
+4.  **`OmniDialogManager.tsx`** (`packages/cli/src/omni/OmniDialogManager.tsx`):
+    -   Renders because its parent (`AppContainer`) now renders the dialog layer (governed by `dialogsVisible`).
+    -   Detects `uiState.resilienceRecoveryRequest` is truthy.
+    -   Renders `<ResilienceRecoveryDialog />`.
+
+#### Extensive Debug Logging (Instrumentation Points)
+-   `GeminiChat.ts`: Logs "Triggering OmniLogger and ResilienceError...".
+-   `useGeminiStream.ts`: Logs "!!! useGeminiStream.ts DETECTED ResilienceError !!!" and "!!! useGeminiStream.ts TRIGGERING setResilienceRecoveryRequest !!!".
+-   `AppContainer.tsx`: Logs "!!! AppContainer: resilienceRecoveryRequest is ACTIVE !!!" and the resulting `dialogsVisible` state.
+-   `OmniDialogManager.tsx`: Logs "!!! OmniDialogManager DETECTED resilienceRecoveryRequest !!!".
+-   `ResilienceRecoveryDialog.tsx`: Logs "!!! ResilienceRecoveryDialog COMPONENT RENDERING !!!".
+
+- **Bypass Prevention**: Added logging to `OmniDialogManager.tsx` to confirm when a recovery request is detected and ensure the `ResilienceRecoveryDialog` is correctly rendered.
+
+### 2. Interactive Recovery UI
+- **Mechanism:** When a 400 error or a "mismatched function parts" error occurs, `GeminiChat` throws a `ResilienceError`.
+- **Improved Detection:** `GeminiChat` now checks `error.status`, `error.code`, and `error.response?.status` to ensure 400 errors are caught regardless of the underlying HTTP client.
+- **Transition from Silent Rollback:** Mismatched function parts errors, which were previously rolled back silently, now trigger the `ResilienceError` flow. This ensures the user is notified and can choose the recovery strategy, preventing confusing "silent failures" where the turn simply ends.
+- **UI Dialog:** The CLI presents a red-bordered "API ERROR DETECTED" box with options:
+    - **Deep Rollback:** Pops the last user message and all subsequent parts. This returns the chat to the state *before* the failing request was sent.
+    - **Clear Current Turn:** Pops only the immediate failing part.
+    - **Ignore:** Retries the request as-is.
+- **Fixed Dialog Visibility:** Fixed a bug in `OmniDialogManager.tsx` where a missing dependency in a `useEffect` hook prevented the recovery dialog from appearing or notifying the OmniSync Hub when a `ResilienceError` occurred.
+- **Implementation:** Integrated into `packages/cli/src/ui/hooks/useGeminiStream.ts` and `packages/cli/src/omni/OmniDialogManager.tsx`.
+
+### 3. Usage for Next Gemini Instance
+If you encounter a 400 error:
+1. **Wait for the Recovery Menu.**
+2. **Select "Deep Rollback"** if you are in a tool loop or the last prompt caused a crash.
+3. **Inspect `Omni/api_errors.log`** immediately. The JSON snapshot at the end of the log entry shows exactly what was sent to Gemini.
+4. **Compare history parts** with the error message in the log to identify the bug.
+

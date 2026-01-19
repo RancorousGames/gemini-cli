@@ -49,6 +49,8 @@ export interface CommandContext {
     addItem: UseHistoryManagerReturn['addItem'];
     /** Clears all history items and the console screen. */
     clear: () => void;
+    /** Removes the last turn from the history. */
+    undo: () => void;
     /**
      * Sets the transient debug message displayed in the application footer in debug mode.
      */

@@ -181,6 +181,7 @@ describe('useSlashCommandProcessor', () => {
           mockSettings,
           mockAddItem,
           mockClearItems,
+          vi.fn(), // undo
           mockLoadHistory,
           vi.fn(), // refreshStatic
           vi.fn(), // toggleVimEnabled
