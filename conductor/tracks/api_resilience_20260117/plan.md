@@ -42,7 +42,8 @@
     - [x] Verify Recovery Menu appears and functions correctly (Rollback works).
 - [x] Task: Investigate silent failure of recovery dialog despite 400 error logging. e5b6ec4
 - [~] Task: Observation Period (7 Days).
-    - [ ] Confirm stability over one week of usage.
+    - [ ] Confirm stability over one week of usage. (Target: 2026-01-28)
+- [x] Task: Investigate and fix persistent 400 error where undo fails. (User Report: 2026-01-21) [718293a]
 
 ## Phase 4: Undo Command Implementation [checkpoint: 9debb82]
 - [x] Task: Investigate and Plan Undo Command.

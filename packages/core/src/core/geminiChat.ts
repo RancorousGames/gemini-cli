@@ -702,19 +702,28 @@ export class GeminiChat {
   /**
    * Performs a deep rollback by removing the last user message and any subsequent
    * parts from the history. This is used when a turn results in an unrecoverable error.
+   *
+   * @remarks
+   * This method specifically looks for the last user message that is NOT a function response,
+   * ensuring that entire tool call chains are reverted to a state where a new user prompt
+   * can be sent safely.
    */
   rollbackDeep(): void {
-    // Find the last user message
-    let lastUserIndex = -1;
+    // Find the last user message that is NOT a function response (i.e., a real prompt)
+    let lastUserPromptIndex = -1;
     for (let i = this.history.length - 1; i >= 0; i--) {
-      if (this.history[i].role === 'user') {
-        lastUserIndex = i;
-        break;
+      const content = this.history[i];
+      if (content.role === 'user') {
+        const isToolResponse = content.parts?.some((p) => p.functionResponse);
+        if (!isToolResponse) {
+          lastUserPromptIndex = i;
+          break;
+        }
       }
     }
 
-    if (lastUserIndex !== -1) {
-      this.history.splice(lastUserIndex);
+    if (lastUserPromptIndex !== -1) {
+      this.history.splice(lastUserPromptIndex);
     }
   }
 

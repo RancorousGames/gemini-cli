@@ -283,6 +283,11 @@ To address a persistent issue where the Gemini API returns a 400 `INVALID_ARGUME
     - **Bug Fix (Jan 2026):** Discovered that `resilienceRecoveryRequest` was missing from the `dialogsVisible` calculation in `AppContainer.tsx`. This prevented the dialog area from rendering even when a recovery request was active. Added `!!resilienceRecoveryRequest` to the `dialogsVisible` constant.
     - **Robust Error Checking:** Discovered that `instanceof ResilienceError` can be unreliable across package/bundle boundaries. Implemented a more robust error type check in `useGeminiStream.ts` that checks `error.name` and `error.constructor.name` in addition to `instanceof`.
 
+#### Refined Recovery Logic (Jan 21, 2026 Update)
+- **The "Hanging Tool Chain" Problem:** Previous recovery work failed because it only popped the *last* turn from the history. In tool-intensive loops, the last turn is often a `functionResponse`. If the API returned a 400 error because of a state mismatch, simply popping the last response left the model's previous `functionCall` as the tail of the history. This resulted in an immediate 400 error on the next attempt because the model context was still invalid (missing the required response for that specific call).
+- **The Fix (`rollbackDeep` Refactor):** Updated `GeminiChat.ts` to perform a "True Prompt Rollback". It now scans backward through history to find the last user entry that is **NOT a function response** (i.e., the original user text prompt). It then splices history from that point forward.
+- **Developer Value:** To maintain maximum robustness, any future history-clearing logic must ensure the history tail is a completed turn (Model Text or Model FunctionCall followed by its corresponding User FunctionResponse). If a 400 error occurs during a chain, the safest recovery is always to revert to the last manual User Prompt.
+
 #### Detailed Execution Flow & Callstack (Recovery Path)
 1.  **`GeminiChat.sendMessageStream`** (`packages/core/src/core/geminiChat.ts`):
     -   API call fails with 400.

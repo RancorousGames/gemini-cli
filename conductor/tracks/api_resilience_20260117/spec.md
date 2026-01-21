@@ -103,3 +103,19 @@ The investigation revealed a failure in the UI's conditional rendering logic:
 - Added `!!resilienceRecoveryRequest` to the `dialogsVisible` calculation in `AppContainer.tsx`.
 - Implemented robust error type checking (`error.name === 'ResilienceError'`) to handle cross-bundle `instanceof` failures.
 - Added comprehensive logging at every step of the callstack to ensure future failures are immediately traceable.
+
+### 2026-01-21 Investigation: Persistent 400 Loops
+#### Issue: Recovery/Undo fails to clear the error state
+Despite triggering the recovery dialog or using `/undo`, the system would immediately return another 400 error upon the next user prompt.
+
+#### Root Cause: Hanging Function Calls
+The core history management's `rollbackDeep` method (used by the recovery menu) was too shallow. It only removed the *last* user entry. In a tool loop, the sequence is:
+1. `user`: "some prompt"
+2. `model`: `functionCall`
+3. `user`: `functionResponse` (FAILS with 400)
+
+Old `rollbackDeep` removed (3), leaving history ending at (2). Sending a new user prompt (4) created a sequence: `...model:functionCall, user:textPrompt`, which the Gemini API rejects with a 400 error because every `functionCall` must be immediately followed by its `functionResponse`.
+
+#### Resolution
+- **Surgical Rollback:** Refactored `GeminiChat.rollbackDeep()` to search backward for the last user message that is **not** a function response. This ensures the entire broken tool chain is wiped, returning the context to the last known good state where a new text prompt is valid.
+- **Terminal Refresh:** Added aggressive screen clearing during history updates to ensure "Reverted" states are rendered without line-wrapping artifacts in the terminal.
